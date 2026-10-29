@@ -165,6 +165,26 @@ class ExtensionGuiTests(unittest.TestCase):
             self.app.manage_questions()
             info.assert_called_once()
 
+    def test_last_username_and_remembered_password(self):
+        self.register()
+        self.app.logout()
+        self.assertEqual(self.app.login_name.get(), "Student")
+        self.assertEqual(self.app.login_password.get(), "")
+        self.app.login_password.set("Password1")
+        self.app.remember_password.set(True)
+        self.app.login_button.invoke()
+        self.assertTrue(self.app.wait_login())
+        self.app.logout()
+        self.assertEqual(self.app.login_name.get(), "Student")
+        self.assertEqual(self.app.login_password.get(), "Password1")
+        self.assertTrue(self.app.remember_password.get())
+        self.app.remember_password.set(False)
+        self.app.login_button.invoke()
+        self.assertTrue(self.app.wait_login())
+        self.app.logout()
+        self.assertEqual(self.app.login_name.get(), "Student")
+        self.assertEqual(self.app.login_password.get(), "")
+
     def test_upload_save_preview_and_quiz_image(self):
         self.register(admin=True)
         self.app.manage_questions()

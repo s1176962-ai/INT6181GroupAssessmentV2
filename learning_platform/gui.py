@@ -13,6 +13,7 @@ from .display import DisplaySettings, window_size
 from .editor_ui import EditorPage
 from .i18n import Translator
 from .importing import QuestionImportService
+from .login_preferences import LoginPreferences
 from .models import option_label
 from .motion import Motion
 from .repositories import (
@@ -110,6 +111,7 @@ class Application:
         )
         self.auth = AuthService(self.guest_progress_path.parent)
         self.tr = Translator(self.guest_progress_path.parent)
+        self.login_preferences = LoginPreferences(self.guest_progress_path.parent)
         self.display_store = DisplaySettings(self.guest_progress_path.parent)
         self.display_warning = ""
         try:
@@ -919,6 +921,9 @@ class Application:
         toggle = getattr(self, "password_toggle", None)
         if toggle and toggle.winfo_exists():
             toggle.configure(state="disabled" if disabled else "normal")
+        remember = getattr(self, "remember_check", None)
+        if remember and remember.winfo_exists():
+            remember.configure(state="disabled" if disabled else "normal")
 
     def login_page(self, registering=False):
         """A local account owns progress; guest mode preserves the V1 data file."""
@@ -1070,9 +1075,15 @@ class Application:
             bg=SURFACE,
             fg=MUTED,
         ).pack(anchor="w", pady=(SPACE_XS, SPACE_MD))
-        self.login_name = tk.StringVar()
-        self.login_password = tk.StringVar()
+        saved_login = (
+            self.login_preferences.load()
+            if not registering
+            else {"username": "", "password": "", "remember": False}
+        )
+        self.login_name = tk.StringVar(value=saved_login["username"])
+        self.login_password = tk.StringVar(value=saved_login["password"])
         self.login_confirm = tk.StringVar()
+        self.remember_password = tk.BooleanVar(value=saved_login["remember"])
         self.password_entries = []
         tk.Label(card, text=self.tr("用户名"), font=TYPE_LABEL, bg=SURFACE, fg=TEXT).pack(
             anchor="w"
@@ -1105,6 +1116,11 @@ class Application:
         )
         self.password_toggle.configure(padx=SPACE_3, pady=11)
         self.password_toggle.pack(side="right", padx=SPACE_SM)
+        if not registering:
+            self.remember_check = ttk.Checkbutton(
+                card, text=self.tr("记住密码"), variable=self.remember_password
+            )
+            self.remember_check.pack(anchor="w", pady=(0, SPACE_MD))
         if registering:
             tk.Label(card, text=self.tr("确认密码"), font=TYPE_LABEL, bg=SURFACE, fg=TEXT).pack(
                 anchor="w"
@@ -1192,6 +1208,11 @@ class Application:
         name = self.login_name.get()
         password = self.login_password.get()
         confirmation = self.login_confirm.get()
+        self._pending_login_credentials = (
+            name,
+            password,
+            bool(self.remember_password.get()) if not registering else False,
+        )
         self._login_busy = True
         self._login_result = None
         self._set_login_button(self.tr("登录中…"), True)
@@ -1226,6 +1247,11 @@ class Application:
             self._set_login_button(action, False)
             self._login_busy = False
             return
+        name, password, remember = self._pending_login_credentials
+        try:
+            self.login_preferences.save(name, password, remember)
+        except (DataError, OSError, ValueError) as exc:
+            messagebox.showwarning(self.tr("保存失败"), self.tr(str(exc)), parent=self.root)
         self.login_password.set("")
         self.login_confirm.set("")
         self._login_busy = False

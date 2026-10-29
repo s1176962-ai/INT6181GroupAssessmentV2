@@ -379,5 +379,6 @@
   "合并 0 道有效题目": "Merge 0 valid questions",
   "合并 {0} 道有效题目": "Merge {0} valid questions",
   "返回修改": "Back to edit",
-  "允许滚轮更改下拉选项和题数": "Allow mouse wheel to change dropdowns and counts"
+  "允许滚轮更改下拉选项和题数": "Allow mouse wheel to change dropdowns and counts",
+  "记住密码": "Remember password"
 }

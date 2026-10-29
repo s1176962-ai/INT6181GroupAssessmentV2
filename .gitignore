@@ -12,6 +12,7 @@ data/profiles/
 data/backups/
 data/account_backups/
 data/settings.json
+data/login_state.json
 .tmp-*
 
 data/display.json
