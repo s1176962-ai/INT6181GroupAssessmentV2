@@ -6,15 +6,21 @@ import time
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from .auth import AuthService
 from .display import DisplaySettings, window_size
 from .editor_ui import EditorPage
 from .i18n import Translator
+from .importing import QuestionImportService
 from .motion import Motion
 from .models import option_label
-from .repositories import ProgressRepository, QuestionRepository
+from .repositories import (
+    LearningPlanRepository,
+    PersonalQuestionRepository,
+    ProgressRepository,
+    QuestionRepository,
+)
 from .services import QuizEngine, image_path, select_questions, subject_image
 from .storage import DataError
 from .ui_tokens import (
@@ -90,12 +96,19 @@ SPACE_XL = SPACE_6
 class Application:
     def __init__(self, root, project_root=ROOT, progress_path=None):
         self.root = root
+        self.aqua = root.tk.call("tk", "windowingsystem") == "aqua"
         self.project_root = Path(project_root)
         self.bank = QuestionRepository(self.project_root / "data" / "questions")
         self.progress = ProgressRepository(
             progress_path or self.project_root / "data" / "progress.json"
         )
         self.guest_progress_path = self.progress.store.path
+        self.personal_bank = PersonalQuestionRepository(
+            self.guest_progress_path.parent / "guest_questions.json"
+        )
+        self.learning_plan = LearningPlanRepository(
+            self.guest_progress_path.parent / "learning_plan.json"
+        )
         self.auth = AuthService(self.guest_progress_path.parent)
         self.tr = Translator(self.guest_progress_path.parent)
         self.display_store = DisplaySettings(self.guest_progress_path.parent)
@@ -405,64 +418,74 @@ class Application:
         if getattr(self, "nav", None) and self.nav.winfo_exists():
             self._paint_nav()
             return
-        self.nav = tk.Frame(self.root, bg=BG, width=196, highlightthickness=1, highlightbackground=BORDER)
+        self.nav = tk.Frame(
+            self.root,
+            bg="#0D1014",
+            width=196,
+            highlightthickness=1,
+            highlightbackground=BORDER,
+        )
         self.nav.pack_propagate(False)
-        tk.Label(self.nav, text="Quiz App", bg=BG, fg=TEXT, font=(FONT, 13, "bold")).pack(
-            anchor="w", padx=16, pady=(18, 18)
+        tk.Label(
+            self.nav,
+            text="Quiz App",
+            bg="#0D1014",
+            fg=TEXT,
+            font=(FONT, 15, "bold"),
+        ).pack(
+            anchor="w", padx=28, pady=(24, 24)
         )
         self._nav_buttons = {}
         items = (
-            ("home", "首页", self.home),
-            ("practice", "开始练习", self.configure),
-            ("notebook", "错题本与复习", self.notebook),
-            ("history", "学习统计与历史", self.history),
-            ("settings", "设置 / 语言", self.settings),
+            ("home", "⌂", "首页", self.home),
+            ("practice", "▷", "开始练习", self.configure),
+            ("personal", "▤", "导入题库", self.personal_bank_page),
+            ("notebook", "▣", "错题本与复习", self.notebook),
+            ("history", "▥", "学习统计与历史", self.history),
+            ("settings", "⚙", "设置 / 语言", self.settings),
         )
-        for key, caption, command in items:
-            button = tk.Button(
+        for key, icon, caption, command in items:
+            button = tk.Label(
                 self.nav,
-                text=self.tr(caption),
-                command=lambda action=command, item=key: self._nav_go(item, action),
-                bg=BG,
+                text=f"{icon}   {self.tr(caption)}",
+                bg="#0D1014",
                 fg=TEXT,
-                activebackground=HOVER,
-                activeforeground=TEXT,
-                relief="flat",
-                bd=0,
                 anchor="w",
                 padx=14,
-                pady=10,
-                font=(FONT, 10),
+                pady=12,
+                font=(FONT, 11),
                 cursor="hand2",
-                highlightthickness=0,
             )
-            button.pack(fill="x", padx=10, pady=2)
+            button.pack(fill="x", padx=10, pady=3)
             button._nav_key = key
+            button._icon = icon
             button._caption = caption
             self._nav_buttons[key] = button
+            button.bind(
+                "<Button-1>",
+                lambda _e, action=command, item=key: self._nav_go(item, action),
+            )
             button.bind("<Enter>", lambda _e, w=button: self._nav_hover(w, True))
             button.bind("<Leave>", lambda _e, w=button: self._nav_hover(w, False))
-        foot = tk.Frame(self.nav, bg=BG)
+        foot = tk.Frame(self.nav, bg="#0D1014")
         foot.pack(side="bottom", fill="x", padx=10, pady=16)
-        self.nav_user = tk.Button(
+        self.nav_user = tk.Label(
             foot,
             text="",
-            command=self._account_menu,
-            bg=BG,
+            bg="#0D1014",
             fg=TEXT,
-            activebackground=HOVER,
-            activeforeground=TEXT,
-            relief="flat",
-            bd=0,
             anchor="w",
             padx=10,
-            pady=8,
+            pady=11,
             font=(FONT, 10),
             cursor="hand2",
+            highlightthickness=1,
+            highlightbackground=BORDER,
         )
         self.nav_user.pack(fill="x")
+        self.nav_user.bind("<Button-1>", lambda _e: self._account_menu())
         self.nav_user.bind("<Enter>", lambda _e: self.nav_user.configure(bg=HOVER))
-        self.nav_user.bind("<Leave>", lambda _e: self.nav_user.configure(bg=BG))
+        self.nav_user.bind("<Leave>", lambda _e: self.nav_user.configure(bg="#0D1014"))
         self._account_popup = tk.Menu(self.root, tearoff=0, bg=SURFACE, fg=TEXT, activebackground=HOVER)
         self._paint_nav()
 
@@ -481,18 +504,18 @@ class Application:
     def _nav_hover(self, button, entering):
         if getattr(self, "_nav_key", None) == button._nav_key:
             return
-        button.configure(bg=HOVER if entering else BG)
+        button.configure(bg=HOVER if entering else "#0D1014")
 
     def _paint_nav(self):
         current = getattr(self, "_nav_key", None)
         for key, button in getattr(self, "_nav_buttons", {}).items():
             if not button.winfo_exists():
                 continue
-            button.configure(text=self.tr(button._caption))
+            button.configure(text=f"{button._icon}   {self.tr(button._caption)}")
             selected = key == current
             button.configure(
-                bg=HOVER if selected else BG,
-                fg=TEXT,
+                bg=PRIMARY if selected else "#0D1014",
+                fg="#FFFFFF" if selected else TEXT,
                 font=(FONT, 10, "bold") if selected else (FONT, 10),
             )
         label = getattr(self, "nav_user", None)
@@ -694,7 +717,8 @@ class Application:
         canvas.create_rectangle(0, 0, fill_to, height, fill=PRIMARY, outline="")
 
     def _bind_chrome(self, button, idle, hover, active, idle_fg, hover_fg=None):
-        hover_fg = hover_fg or idle_fg
+        idle_fg = self._native_button_ink(idle_fg)
+        hover_fg = self._native_button_ink(hover_fg or idle_fg)
 
         def enter(_e):
             if str(button["state"]) == "normal":
@@ -714,6 +738,7 @@ class Application:
         button.bind("<ButtonRelease-1>", enter)
 
     def _flat_button(self, parent, text, command, font, bg, fg, padx, pady):
+        fg = self._native_button_ink(fg)
         button = tk.Button(
             parent,
             text=text,
@@ -733,6 +758,12 @@ class Application:
             cursor="hand2",
         )
         return button
+
+    def _native_button_ink(self, color):
+        """Keep text readable when macOS renders classic Tk buttons with a white face."""
+        if self.aqua and color in {TEXT, BUTTON_INK}:
+            return "#111111"
+        return color
 
     def _tool_button(self, parent, text, command):
         button = self._flat_button(parent, text, command, TYPE_TOOL, BG, TEXT, SPACE_3, max(8, (HIT - 18) // 2))
@@ -787,7 +818,10 @@ class Application:
 
     def _set_login_button(self, text, disabled):
         color = "#2F3336" if disabled else BUTTON_FILL
-        ink = MUTED if disabled else "#FFFFFF"
+        if self.aqua:
+            ink = "#666666" if disabled else "#111111"
+        else:
+            ink = MUTED if disabled else "#FFFFFF"
         self.login_button.configure(
             text=text,
             state="disabled" if disabled else "normal",
@@ -1086,6 +1120,10 @@ class Application:
         self._login_busy = False
         self.user = payload
         self.progress = ProgressRepository(self.auth.progress_path(payload))
+        self.personal_bank = PersonalQuestionRepository(
+            self.auth.personal_questions_path(payload)
+        )
+        self.learning_plan = LearningPlanRepository(self.auth.learning_plan_path(payload))
         self.home()
 
     def wait_login(self, timeout=8.0):
@@ -1101,11 +1139,23 @@ class Application:
     def enter_guest(self):
         self.user = None
         self.progress = ProgressRepository(self.guest_progress_path)
+        self.personal_bank = PersonalQuestionRepository(
+            self.guest_progress_path.parent / "guest_questions.json"
+        )
+        self.learning_plan = LearningPlanRepository(
+            self.guest_progress_path.parent / "learning_plan.json"
+        )
         self.home()
 
     def logout(self):
         self.user = None
         self.progress = ProgressRepository(self.guest_progress_path)
+        self.personal_bank = PersonalQuestionRepository(
+            self.guest_progress_path.parent / "guest_questions.json"
+        )
+        self.learning_plan = LearningPlanRepository(
+            self.guest_progress_path.parent / "learning_plan.json"
+        )
         self.login_page()
 
     def manage_questions(self):
@@ -1304,11 +1354,124 @@ class Application:
         widget.pack(anchor="w", pady=4)
         return widget
 
-    def load_bank(self):
-        self.questions = self.bank.all()
-        self.by_id = {q.id: q for q in self.questions}
+    def _mock_action(self, parent, text, command, primary=True, padx=18, pady=11):
+        """Canvas-friendly action used by the approved dark mock-up."""
+        idle = PRIMARY if primary else HOVER
+        hover = "#168BDD" if primary else "#272A30"
+        label = tk.Label(
+            parent,
+            text=text,
+            bg=idle,
+            fg="#FFFFFF" if primary else TEXT,
+            font=(FONT, 11, "bold"),
+            padx=padx,
+            pady=pady,
+            cursor="hand2",
+            highlightthickness=1,
+            highlightbackground=PRIMARY if primary else BORDER,
+        )
+        label.bind("<Button-1>", lambda _e: command())
+        label.bind("<Enter>", lambda _e: label.configure(bg=hover))
+        label.bind("<Leave>", lambda _e: label.configure(bg=idle))
+        return label
 
-    def home(self):
+    def load_bank(self):
+        self.public_questions = self.bank.all()
+        self.personal_bank_error = ""
+        if self.user:
+            try:
+                self.personal_questions = self.personal_bank.all()
+            except DataError as exc:
+                self.personal_questions = []
+                self.personal_bank_error = str(exc)
+        else:
+            self.personal_questions = []
+        self.questions = self.public_questions
+        self.by_id = {
+            question.id: question
+            for question in [*self.public_questions, *self.personal_questions]
+        }
+
+    def _plan_ring(self, parent, plan):
+        """Render the concept mock-up's circular daily-goal indicator."""
+        size = 152
+        canvas = tk.Canvas(
+            parent, width=size, height=size, bg=SURFACE, highlightthickness=0, bd=0
+        )
+        canvas.create_oval(15, 15, size - 15, size - 15, outline=TRACK, width=12)
+        if plan["percent"]:
+            canvas.create_arc(
+                15,
+                15,
+                size - 15,
+                size - 15,
+                start=90,
+                extent=-min(100, plan["percent"]) * 3.6,
+                style="arc",
+                outline=PRIMARY,
+                width=12,
+            )
+        canvas.create_text(
+            size / 2,
+            62,
+            text=f"{plan['today']} / {plan['daily_goal']}",
+            fill=TEXT,
+            font=(FONT, 18, "bold"),
+        )
+        canvas.create_text(
+            size / 2, 91, text=self.tr("今日进度"), fill=MUTED, font=TYPE_HINT
+        )
+        canvas.create_text(
+            size / 2,
+            112,
+            text=f"{plan['percent']:.0f}%",
+            fill=PRIMARY,
+            font=(FONT, 11, "bold"),
+        )
+        return canvas
+
+    def _weekly_chart(self, parent, weekly):
+        """Render a compact seven-day activity chart."""
+        width, height = 330, 142
+        canvas = tk.Canvas(
+            parent, width=width, height=height, bg=SURFACE, highlightthickness=0, bd=0
+        )
+        top, baseline = 18, 105
+        maximum = max([item["count"] for item in weekly] + [1])
+        canvas.create_line(8, baseline, width - 8, baseline, fill=BORDER, width=1)
+        gap = (width - 24) / max(1, len(weekly))
+        for index, item in enumerate(weekly):
+            center = 12 + gap * index + gap / 2
+            bar_height = (
+                0
+                if not item["count"]
+                else max(7, item["count"] / maximum * (baseline - top))
+            )
+            canvas.create_rectangle(
+                center - 10,
+                baseline - bar_height,
+                center + 10,
+                baseline,
+                fill=PRIMARY,
+                outline="",
+            )
+            canvas.create_text(
+                center,
+                baseline - bar_height - 9,
+                text=str(item["count"]),
+                fill=TEXT if item["count"] else MUTED,
+                font=(FONT, 8),
+            )
+            canvas.create_text(
+                center,
+                125,
+                text=item["date"][5:],
+                fill=MUTED,
+                font=(FONT, 8),
+            )
+        return canvas
+
+    def _legacy_home(self):
         if not self.check_session():
             return
         self.signed_in = True
@@ -1319,7 +1482,7 @@ class Application:
         self._nav_key = "home"
         self.clear(self.tr("首页"), show_heading=False)
         name = self.user["name"] if self.user else self.tr("访客")
-        subjects = sorted({q.subject for q in self.questions})
+        subjects = sorted({q.subject for q in self.public_questions})
         wrong = {}
         history = []
         accuracy_text = "—"
@@ -1353,9 +1516,76 @@ class Application:
             fg=TEXT,
             font=(FONT, 16, "bold"),
         ).pack(anchor="w", pady=(6, 10))
-        ttk.Button(composer, text=self.tr("开始练习"), command=self.configure, style="Accent.TButton").pack(
-            anchor="w"
-        )
+        entry_actions = ttk.Frame(composer, style="Card.TFrame")
+        entry_actions.pack(anchor="w")
+        ttk.Button(
+            entry_actions,
+            text=self.tr("公共题库练习"),
+            command=self.configure,
+            style="Accent.TButton",
+        ).pack(side="left", padx=(0, 8))
+        if self.user:
+            ttk.Button(
+                entry_actions,
+                text=self.tr("我的题库"),
+                command=self.personal_bank_page,
+                style="Tool.TButton",
+            ).pack(side="left")
+        try:
+            plan = self.learning_plan.summary()
+        except DataError as exc:
+            plan = None
+            bank_error = bank_error or str(exc)
+        if plan:
+            plan_card = card_frame(feed, pad=16)
+            plan_card.pack(fill="x", pady=(0, 16))
+            plan_head = tk.Frame(plan_card, bg=SURFACE)
+            plan_head.pack(fill="x")
+            tk.Label(
+                plan_head,
+                text=self.tr("每日学习计划"),
+                bg=SURFACE,
+                fg=TEXT,
+                font=(FONT, 14, "bold"),
+            ).pack(side="left")
+            ttk.Button(
+                plan_head,
+                text=self.tr("调整每日目标"),
+                command=self.set_daily_goal,
+                style="Tool.TButton",
+            ).pack(side="right")
+            dashboard = tk.Frame(plan_card, bg=SURFACE)
+            dashboard.pack(fill="x", pady=(12, 0))
+            self._plan_ring(dashboard, plan).pack(side="left", padx=(0, 18))
+            goal_stats = tk.Frame(dashboard, bg=SURFACE)
+            goal_stats.pack(side="left", fill="y", padx=(0, 18))
+            for value, title in (
+                (plan["daily_goal"], self.tr("每日目标")),
+                (plan["remaining"], self.tr("还差题数")),
+                (plan["streak"], self.tr("连续学习天数")),
+            ):
+                stat = tk.Frame(goal_stats, bg=HOVER, padx=14, pady=8)
+                stat.pack(fill="x", pady=(0, 7))
+                tk.Label(
+                    stat,
+                    text=str(value),
+                    bg=HOVER,
+                    fg=TEXT,
+                    font=(FONT, 15, "bold"),
+                ).pack(side="left")
+                tk.Label(
+                    stat, text=title, bg=HOVER, fg=MUTED, font=TYPE_HINT
+                ).pack(side="left", padx=(9, 0))
+            chart = tk.Frame(dashboard, bg=SURFACE)
+            chart.pack(side="left", fill="both", expand=True)
+            tk.Label(
+                chart,
+                text=self.tr("最近 7 天"),
+                bg=SURFACE,
+                fg=TEXT,
+                font=(FONT, 11, "bold"),
+            ).pack(anchor="w")
+            self._weekly_chart(chart, plan["weekly"]).pack(anchor="w")
         tk.Label(
             feed,
             text=self.tr(
@@ -1484,7 +1714,7 @@ class Application:
             anchor="w", pady=(4, 8)
         )
         counts = {}
-        for question in self.questions:
+        for question in self.public_questions:
             counts[question.subject] = counts.get(question.subject, 0) + 1
         subject_accuracy = {}
         for record in history:
@@ -1520,7 +1750,7 @@ class Application:
             ).pack(anchor="w")
             self._subject_rows.append((subject.lower(), row))
             self._search_index.append(("subject", subject, subject, lambda value=subject: self.configure(value)))
-        for question in self.questions:
+        for question in self.public_questions:
             self._search_index.append(
                 (
                     "question",
@@ -1554,6 +1784,679 @@ class Application:
                 self.tr("题库提示（其他有效题目仍可使用）：\n") + "\n".join(self.bank.warnings),
                 "Warning.TLabel",
             )
+        if self.personal_bank_error:
+            self.label(self.tr(self.personal_bank_error), "Warning.TLabel")
+
+    def home(self):
+        """Dashboard matching the approved items 2/4 mock-up."""
+        if not self.check_session():
+            return
+        self.signed_in = True
+        self.users_page = None
+        self.editor = None
+        self.engine = None
+        self.load_bank()
+        self._nav_key = "home"
+        self.clear(self.tr("首页"), show_heading=False)
+        self.chrome.pack_forget()
+        self.rule.pack_forget()
+        self.body.configure(padding=(18, 18))
+
+        name = self.user["name"] if self.user else self.tr("访客")
+        hour = datetime.now().hour
+        greeting = self.tr("早上好") if hour < 12 else self.tr("下午好") if hour < 18 else self.tr("晚上好")
+        tk.Label(
+            self.body,
+            text=f"{greeting}，{name}",
+            bg=BG,
+            fg=TEXT,
+            font=(FONT, 24, "bold"),
+        ).pack(anchor="w", pady=(0, 16))
+
+        wrong, history, data_error = {}, [], ""
+        try:
+            progress = self.progress.load()
+            wrong = progress.get("wrong") or {}
+            history = progress.get("history") or []
+        except DataError as exc:
+            data_error = str(exc)
+        try:
+            plan = self.learning_plan.summary()
+        except DataError as exc:
+            plan = {
+                "daily_goal": 20,
+                "today": 0,
+                "remaining": 20,
+                "percent": 0,
+                "streak": 0,
+                "weekly": [],
+            }
+            data_error = data_error or str(exc)
+
+        top = tk.Frame(self.body, bg=BG)
+        top.pack(fill="x")
+        goal = card_frame(top, pad=20)
+        goal.pack(side="left", fill="both", expand=True, padx=(0, 12))
+        tk.Label(
+            goal,
+            text=self.tr("今日目标"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 15, "bold"),
+        ).pack(anchor="w")
+        score = tk.Frame(goal, bg=SURFACE)
+        score.pack(anchor="w", pady=(16, 2))
+        tk.Label(
+            score,
+            text=str(plan["today"]),
+            bg=SURFACE,
+            fg=PRIMARY,
+            font=(FONT, 36, "bold"),
+        ).pack(side="left")
+        tk.Label(
+            score,
+            text=f" / {plan['daily_goal']} {self.tr('题')}",
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 22, "bold"),
+        ).pack(side="left", pady=(10, 0))
+        tk.Label(
+            goal,
+            text=self.tr("已完成 {0}%", f"{plan['percent']:.0f}"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=TYPE_BODY,
+        ).pack(anchor="w", pady=(0, 8))
+        progress_canvas = tk.Canvas(
+            goal, height=18, bg=SURFACE, highlightthickness=0, bd=0
+        )
+        progress_canvas.pack(fill="x", pady=(0, 20))
+
+        def draw_goal_bar(_event=None):
+            progress_canvas.delete("all")
+            width = max(progress_canvas.winfo_width(), 20)
+            progress_canvas.create_rectangle(0, 2, width, 16, fill="#363A40", outline="")
+            progress_canvas.create_rectangle(
+                0,
+                2,
+                width * plan["percent"] / 100,
+                16,
+                fill=PRIMARY,
+                outline="",
+            )
+
+        progress_canvas.bind("<Configure>", draw_goal_bar)
+        self._mock_action(
+            goal,
+            self.tr("继续今日练习"),
+            lambda: self.configure(bank_kind="public"),
+            True,
+            padx=24,
+            pady=12,
+        ).pack(fill="x")
+
+        side = tk.Frame(top, bg=BG)
+        side.pack(side="left", fill="both", expand=True)
+        streak = card_frame(side, pad=18)
+        streak.pack(fill="x", pady=(0, 12))
+        tk.Label(
+            streak,
+            text=self.tr("连续学习"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 14, "bold"),
+        ).pack(anchor="w")
+        tk.Label(
+            streak,
+            text=self.tr("{0} 天", plan["streak"]),
+            bg=SURFACE,
+            fg=SUCCESS_FG,
+            font=(FONT, 30, "bold"),
+        ).pack(anchor="w", pady=(7, 6))
+        days = tk.Frame(streak, bg=SURFACE)
+        days.pack(fill="x")
+        day_names = self.tr("一 二 三 四 五 六 日").split()
+        weekly = plan["weekly"][-7:]
+        for index, label in enumerate(day_names):
+            cell = tk.Frame(days, bg=SURFACE)
+            cell.pack(side="left", expand=True)
+            tk.Label(cell, text=label, bg=SURFACE, fg=MUTED, font=(FONT, 8)).pack()
+            done = index < len(weekly) and weekly[index]["count"] > 0
+            tk.Label(
+                cell,
+                text="●" if done else "○",
+                bg=SURFACE,
+                fg=SUCCESS_FG if done else PRIMARY if index == len(day_names) - 1 else MUTED,
+                font=(FONT, 15),
+            ).pack()
+
+        setting = card_frame(side, pad=18)
+        setting.pack(fill="x")
+        tk.Label(
+            setting,
+            text=self.tr("设置每日目标"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 14, "bold"),
+        ).pack(anchor="w")
+        goal_row = tk.Frame(setting, bg=SURFACE)
+        goal_row.pack(fill="x", pady=(10, 0))
+        goal_value = tk.Label(
+            goal_row,
+            text=str(plan["daily_goal"]),
+            bg=HOVER,
+            fg=TEXT,
+            font=(FONT, 14),
+            padx=18,
+            pady=8,
+            highlightthickness=1,
+            highlightbackground=BORDER,
+        )
+        goal_value.pack(side="left")
+        tk.Label(
+            goal_row,
+            text=self.tr("题 / 天"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=TYPE_BODY,
+        ).pack(side="left", padx=12)
+        self._mock_action(
+            goal_row, self.tr("调整"), self.set_daily_goal, False, padx=12, pady=8
+        ).pack(side="right")
+
+        recent = card_frame(self.body, pad=18)
+        recent.pack(fill="x", pady=(14, 0))
+        tk.Label(
+            recent,
+            text=self.tr("最近学习"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 14, "bold"),
+        ).pack(anchor="w", pady=(0, 8))
+        if history:
+            for record in list(reversed(history))[:5]:
+                row = tk.Frame(recent, bg=SURFACE)
+                row.pack(fill="x", pady=6)
+                tk.Label(
+                    row,
+                    text=str(record["subject"]),
+                    bg=SURFACE,
+                    fg=TEXT,
+                    font=(FONT, 10, "bold"),
+                    anchor="w",
+                ).pack(side="left", fill="x", expand=True)
+                tk.Label(
+                    row,
+                    text=self.tr("{0} 题", record["total"]),
+                    bg=SURFACE,
+                    fg=TEXT,
+                    font=TYPE_HINT,
+                ).pack(side="left", padx=18)
+                tk.Label(
+                    row,
+                    text=str(record["date"])[:10],
+                    bg=SURFACE,
+                    fg=MUTED,
+                    font=TYPE_HINT,
+                ).pack(side="right")
+                tk.Frame(recent, bg=BORDER, height=1).pack(fill="x")
+        else:
+            tk.Label(
+                recent,
+                text=self.tr("还没有学习记录，完成第一次练习后会显示在这里。"),
+                bg=SURFACE,
+                fg=MUTED,
+                font=TYPE_BODY,
+            ).pack(anchor="w", pady=(10, 12))
+            self._mock_action(
+                recent,
+                self.tr("开始第一次练习"),
+                lambda: self.configure(bank_kind="public"),
+                True,
+            ).pack(anchor="w")
+        if data_error:
+            tk.Label(
+                self.body,
+                text=data_error,
+                bg=BG,
+                fg=ERROR,
+                font=TYPE_HINT,
+            ).pack(anchor="w", pady=(8, 0))
+        if self.user and self.user["role"] == "admin":
+            admin = tk.Frame(self.body, bg=BG)
+            admin.pack(fill="x", pady=(12, 0))
+            self._mock_action(admin, self.tr("题库管理 / 上传图片"), self.manage_questions, False).pack(
+                side="left", padx=(0, 8)
+            )
+            self._mock_action(admin, self.tr("用户管理"), self.manage_users, False).pack(side="left")
+
+    def set_daily_goal(self):
+        try:
+            current = self.learning_plan.load()["daily_goal"]
+            goal = simpledialog.askinteger(
+                self.tr("每日目标"),
+                self.tr("请输入每天计划完成的题数（1–500）："),
+                initialvalue=current,
+                minvalue=1,
+                maxvalue=500,
+                parent=self.root,
+            )
+            if goal is not None:
+                self.learning_plan.set_goal(goal)
+                self.home()
+        except (DataError, ValueError) as exc:
+            messagebox.showerror(self.tr("保存失败"), self.tr(str(exc)), parent=self.root)
+
+    def _legacy_personal_bank_page(self):
+        if not self.user:
+            messagebox.showinfo(
+                self.tr("权限提示"),
+                self.tr("请先登录账户，再导入或使用个人题库。"),
+                parent=self.root,
+            )
+            return
+        if not self.check_session():
+            return
+        self._nav_key = "personal"
+        self.clear(self.tr("我的题库"))
+        self.load_bank()
+        self.import_preview = None
+        intro = card_frame(self.body, pad=18)
+        intro.pack(fill="x", pady=(0, 14))
+        tk.Label(
+            intro,
+            text=self.tr("个人题库导入"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 16, "bold"),
+        ).pack(anchor="w")
+        tk.Label(
+            intro,
+            text=self.tr(
+                "个人题库仅属于当前账户，不会修改管理员维护的公共题库。支持 JSON 和 CSV；先校验预览，确认后才会保存。"
+            ),
+            bg=SURFACE,
+            fg=MUTED,
+            font=TYPE_BODY,
+            wraplength=760,
+            justify="left",
+        ).pack(anchor="w", pady=(6, 14))
+        workflow = tk.Frame(intro, bg=SURFACE)
+        workflow.pack(fill="x")
+        self.import_steps = []
+        for number, title, hint in (
+            ("1", self.tr("上传文件"), self.tr("选择 JSON 或 CSV")),
+            ("2", self.tr("自动校验"), self.tr("检查格式与重复题")),
+            ("3", self.tr("预览题目"), self.tr("查看有效与错误项目")),
+            ("4", self.tr("确认合并"), self.tr("写入当前个人题库")),
+        ):
+            step = tk.Frame(workflow, bg=HOVER, padx=12, pady=10)
+            step.pack(side="left", fill="x", expand=True, padx=(0, 8))
+            badge = tk.Label(
+                step,
+                text=number,
+                width=2,
+                bg=PRIMARY if number == "1" else TRACK,
+                fg=ON_PRIMARY if number == "1" else MUTED,
+                font=(FONT, 10, "bold"),
+            )
+            badge.pack(anchor="w")
+            title_label = tk.Label(
+                step,
+                text=title,
+                bg=HOVER,
+                fg=TEXT,
+                font=(FONT, 10, "bold"),
+            )
+            title_label.pack(anchor="w", pady=(5, 1))
+            tk.Label(
+                step, text=hint, bg=HOVER, fg=MUTED, font=(FONT, 8)
+            ).pack(anchor="w")
+            self.import_steps.append((badge, title_label))
+
+        upload_zone = tk.Frame(
+            self.body,
+            bg=SURFACE,
+            highlightthickness=2,
+            highlightbackground=PRIMARY,
+            padx=18,
+            pady=16,
+        )
+        upload_zone.pack(fill="x", pady=(0, 14))
+        upload_copy = tk.Frame(upload_zone, bg=SURFACE)
+        upload_copy.pack(side="left", fill="x", expand=True)
+        tk.Label(
+            upload_copy,
+            text=self.tr("选择题库文件开始导入"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 12, "bold"),
+        ).pack(anchor="w")
+        tk.Label(
+            upload_copy,
+            text=self.tr("支持 .json 与 .csv；文件会先校验，不会直接覆盖现有题库。"),
+            bg=SURFACE,
+            fg=MUTED,
+            font=TYPE_HINT,
+        ).pack(anchor="w", pady=(4, 0))
+        actions = tk.Frame(upload_zone, bg=SURFACE)
+        actions.pack(side="right")
+        ttk.Button(
+            actions,
+            text=self.tr("选择 JSON / CSV 文件"),
+            command=self.choose_import_file,
+            style="Accent.TButton",
+        ).pack(side="left", padx=(0, 8))
+        practice = ttk.Button(
+            actions,
+            text=self.tr("练习个人题库（{0} 题）", len(self.personal_questions)),
+            command=lambda: self.configure(bank_kind="personal"),
+            style="Tool.TButton",
+        )
+        practice.pack(side="left")
+        if not self.personal_questions:
+            practice.state(["disabled"])
+        self.import_summary = ttk.Label(
+            self.body,
+            text=self.tr("等待选择文件"),
+            style="Muted.TLabel",
+        )
+        self.import_summary.pack(anchor="w", pady=(0, 8))
+        columns = ("row", "id", "status", "message")
+        self.import_table = ttk.Treeview(
+            self.body, columns=columns, show="headings", height=12
+        )
+        for key, title, width in (
+            ("row", "#", 55),
+            ("id", self.tr("题目 ID"), 130),
+            ("status", self.tr("状态"), 100),
+            ("message", self.tr("结果 / 错误原因"), 520),
+        ):
+            self.import_table.heading(key, text=title)
+            self.import_table.column(key, width=width, anchor="w")
+        self.import_table.pack(fill="both", expand=True)
+        self.import_confirm = ttk.Button(
+            self.body,
+            text=self.tr("确认导入有效题目"),
+            command=self.confirm_personal_import,
+            style="Accent.TButton",
+        )
+        self.import_confirm.pack(anchor="w", pady=(12, 4))
+        self.import_confirm.state(["disabled"])
+
+    def personal_bank_page(self):
+        """Import workflow matching the approved right-hand mock-up."""
+        if not self.user:
+            messagebox.showinfo(
+                self.tr("权限提示"),
+                self.tr("请先登录账户，再导入或使用个人题库。"),
+                parent=self.root,
+            )
+            return
+        if not self.check_session():
+            return
+        self._nav_key = "personal"
+        self.clear(self.tr("导入题库"), show_heading=False)
+        self.chrome.pack_forget()
+        self.rule.pack_forget()
+        self.body.configure(padding=(18, 18))
+        self.load_bank()
+        self.import_preview = None
+
+        tk.Label(
+            self.body,
+            text=self.tr("导入题库"),
+            bg=BG,
+            fg=TEXT,
+            font=(FONT, 24, "bold"),
+        ).pack(anchor="w", pady=(0, 16))
+
+        workflow = tk.Frame(self.body, bg=BG)
+        workflow.pack(fill="x", pady=(0, 16))
+        self.import_steps = []
+        step_data = (
+            ("1", self.tr("选择文件")),
+            ("2", self.tr("数据校验")),
+            ("3", self.tr("预览确认")),
+            ("4", self.tr("合并完成")),
+        )
+        for index, (number, title) in enumerate(step_data):
+            cell = tk.Frame(workflow, bg=BG)
+            cell.pack(side="left", fill="x", expand=True)
+            badge = tk.Label(
+                cell,
+                text=number,
+                width=2,
+                height=1,
+                bg="#183C70" if index < 2 else PRIMARY if index == 2 else HOVER,
+                fg="#FFFFFF" if index <= 2 else MUTED,
+                font=(FONT, 13, "bold"),
+                padx=5,
+                pady=5,
+                highlightthickness=1,
+                highlightbackground=PRIMARY if index <= 2 else MUTED,
+            )
+            badge.pack()
+            title_label = tk.Label(
+                cell,
+                text=title,
+                bg=BG,
+                fg=TEXT if index <= 2 else MUTED,
+                font=(FONT, 10),
+            )
+            title_label.pack(pady=(6, 0))
+            self.import_steps.append((badge, title_label))
+
+        file_card = tk.Frame(
+            self.body,
+            bg=SURFACE,
+            padx=16,
+            pady=15,
+            highlightthickness=1,
+            highlightbackground=BORDER,
+            cursor="hand2",
+        )
+        file_card.pack(fill="x", pady=(0, 14))
+        self.import_file_name = tk.Label(
+            file_card,
+            text=self.tr("▤  选择 JSON / CSV 文件"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 12),
+            cursor="hand2",
+        )
+        self.import_file_name.pack(side="left")
+        self.import_file_total = tk.Label(
+            file_card,
+            text=self.tr("点击选择文件"),
+            bg=SURFACE,
+            fg=MUTED,
+            font=TYPE_HINT,
+            cursor="hand2",
+        )
+        self.import_file_total.pack(side="right")
+        bind_whole(file_card, self.choose_import_file)
+
+        stats = tk.Frame(self.body, bg=BG)
+        stats.pack(fill="x", pady=(0, 14))
+        self.import_stat_labels = {}
+        for key, title, color in (
+            ("valid", self.tr("有效"), SUCCESS_FG),
+            ("warning", self.tr("警告"), "#F5C542"),
+            ("error", self.tr("错误"), ERROR),
+            ("duplicate", self.tr("重复"), MUTED),
+        ):
+            card = card_frame(stats, pad=14)
+            card.pack(side="left", fill="x", expand=True, padx=(0, 10))
+            tk.Label(card, text=title, bg=SURFACE, fg=color, font=TYPE_HINT).pack(anchor="w")
+            value = tk.Label(
+                card, text="0", bg=SURFACE, fg=color, font=(FONT, 22, "bold")
+            )
+            value.pack(anchor="w", pady=(4, 0))
+            self.import_stat_labels[key] = value
+
+        columns = ("status", "id", "subject", "topic", "difficulty", "question")
+        self.import_table = ttk.Treeview(
+            self.body, columns=columns, show="headings", height=9
+        )
+        for key, title, width in (
+            ("status", self.tr("状态"), 95),
+            ("id", "ID", 90),
+            ("subject", self.tr("学科"), 105),
+            ("topic", self.tr("主题"), 120),
+            ("difficulty", self.tr("难度"), 90),
+            ("question", self.tr("题目"), 390),
+        ):
+            self.import_table.heading(key, text=title)
+            self.import_table.column(key, width=width, anchor="w")
+        self.import_table.pack(fill="both", expand=True, pady=(0, 14))
+        self.import_table.tag_configure("valid", foreground=SUCCESS_FG)
+        self.import_table.tag_configure("duplicate", foreground=MUTED)
+        self.import_table.tag_configure("error", foreground=ERROR)
+
+        permissions = tk.Frame(self.body, bg=BG)
+        permissions.pack(fill="x")
+        tk.Label(
+            permissions,
+            text=self.tr("导入后权限"),
+            bg=BG,
+            fg=TEXT,
+            font=(FONT, 13, "bold"),
+        ).pack(anchor="w")
+        option_row = tk.Frame(permissions, bg=BG)
+        option_row.pack(anchor="w", pady=(8, 0))
+        tk.Label(
+            option_row,
+            text="◉  " + self.tr("仅自己可用"),
+            bg=BG,
+            fg=TEXT,
+            font=TYPE_BODY,
+        ).pack(side="left")
+        tk.Label(
+            option_row,
+            text="○  " + self.tr("共享给本机所有账户（需管理员批准）"),
+            bg=BG,
+            fg=MUTED,
+            font=TYPE_BODY,
+        ).pack(side="left", padx=(24, 0))
+
+        footer = tk.Frame(self.body, bg=BG)
+        footer.pack(fill="x", pady=(18, 0))
+        self.import_summary = tk.Label(
+            footer,
+            text=self.tr("ⓘ 错误记录不会导入题库"),
+            bg=BG,
+            fg=MUTED,
+            font=TYPE_HINT,
+        )
+        self.import_summary.pack(side="left")
+        self.import_confirm = self._mock_action(
+            footer,
+            self.tr("合并 0 道有效题目"),
+            self.confirm_personal_import,
+            True,
+            padx=16,
+            pady=10,
+        )
+        self.import_confirm.pack(side="right")
+        self._mock_action(
+            footer,
+            self.tr("返回修改"),
+            self.choose_import_file,
+            False,
+            padx=14,
+            pady=10,
+        ).pack(side="right", padx=(0, 10))
+
+    def _set_import_step(self, active):
+        for index, (badge, title) in enumerate(getattr(self, "import_steps", []), 1):
+            selected = index <= active
+            badge.configure(
+                bg=PRIMARY if selected else TRACK,
+                fg=ON_PRIMARY if selected else MUTED,
+            )
+            title.configure(fg=TEXT if selected else MUTED)
+
+    def choose_import_file(self):
+        path = filedialog.askopenfilename(
+            parent=self.root,
+            title=self.tr("选择题库文件"),
+            filetypes=(("JSON / CSV", "*.json *.csv"), ("JSON", "*.json"), ("CSV", "*.csv")),
+        )
+        if not path:
+            return
+        try:
+            preview = QuestionImportService(
+                self.personal_bank, self.public_questions
+            ).preview(path)
+        except (DataError, ValueError) as exc:
+            messagebox.showerror(self.tr("导入文件无效"), self.tr(str(exc)), parent=self.root)
+            return
+        self.import_preview = preview
+        self._set_import_step(3 if preview.valid else 2)
+        self.import_table.delete(*self.import_table.get_children())
+        labels = {
+            "valid": self.tr("有效"),
+            "duplicate": self.tr("重复"),
+            "error": self.tr("错误"),
+        }
+        for row in preview.rows:
+            self.import_table.insert(
+                "",
+                "end",
+                values=(
+                    labels[row["status"]],
+                    row["id"],
+                    row.get("subject", ""),
+                    row.get("topic", ""),
+                    row.get("difficulty", ""),
+                    row.get("question", "") or self.tr(row["message"]),
+                ),
+                tags=(row["status"],),
+            )
+        if getattr(self, "import_file_name", None):
+            self.import_file_name.configure(text=f"▤  {preview.path.name}")
+            self.import_file_total.configure(text=self.tr("共 {0} 条", preview.total))
+        for key, value in (
+            ("valid", len(preview.valid)),
+            ("warning", 0),
+            ("error", preview.errors),
+            ("duplicate", preview.duplicates),
+        ):
+            label = getattr(self, "import_stat_labels", {}).get(key)
+            if label:
+                label.configure(text=str(value))
+        self.import_summary.configure(
+            text=self.tr("ⓘ 错误记录不会导入题库，可下载校验报告")
+        )
+        self.import_confirm.configure(
+            text=self.tr("合并 {0} 道有效题目", len(preview.valid)),
+            bg=PRIMARY if preview.valid else PRIMARY_DISABLED,
+        )
+
+    def confirm_personal_import(self):
+        preview = getattr(self, "import_preview", None)
+        if not preview or not preview.valid:
+            return
+        if not messagebox.askyesno(
+            self.tr("确认导入"),
+            self.tr("将 {0} 道有效题目加入当前账户的个人题库？", len(preview.valid)),
+            parent=self.root,
+        ):
+            return
+        try:
+            added = QuestionImportService(
+                self.personal_bank, self.public_questions
+            ).confirm(preview)
+        except (DataError, ValueError) as exc:
+            messagebox.showerror(self.tr("导入失败"), self.tr(str(exc)), parent=self.root)
+            return
+        messagebox.showinfo(
+            self.tr("导入完成"),
+            self.tr("已导入 {0} 道题；重复题目保持跳过。", len(added)),
+            parent=self.root,
+        )
+        self.personal_bank_page()
 
     def _open_question_preview(self, question_id):
         question = self.by_id.get(question_id)
@@ -1590,9 +2493,9 @@ class Application:
                 text=f"{tag} · {label[:48]}",
                 command=action,
                 bg=SURFACE,
-                fg=TEXT,
+                fg=self._native_button_ink(TEXT),
                 activebackground=HOVER,
-                activeforeground=TEXT,
+                activeforeground=self._native_button_ink(TEXT),
                 relief="flat",
                 bd=0,
                 anchor="w",
@@ -1619,15 +2522,30 @@ class Application:
                 card.configure(highlightbackground=BORDER, highlightthickness=1, bg=SURFACE)
         self._expanded_subject = None if current == name else name
 
-    def configure(self, subject=None):
+    def configure(self, subject=None, bank_kind="public"):
         if not self.check_session():
             return
+        if bank_kind == "personal" and not self.user:
+            self.personal_bank_page()
+            return
+        self.load_bank()
+        self.questions = (
+            self.personal_questions if bank_kind == "personal" else self.public_questions
+        )
+        self._practice_bank_kind = bank_kind
         self.clear(self.tr("配置练习"))
         if not self.questions:
             self.label(
-                self.tr("题库为空，请添加或修复 data/questions 中的 JSON 文件，然后重新加载。")
+                self.tr(
+                    "个人题库为空，请先导入 JSON 或 CSV 文件。"
+                    if bank_kind == "personal"
+                    else "题库为空，请添加或修复 data/questions 中的 JSON 文件，然后重新加载。"
+                )
             )
-            self.button(self.tr("返回首页"), self.home)
+            self.button(
+                self.tr("返回我的题库") if bank_kind == "personal" else self.tr("返回首页"),
+                self.personal_bank_page if bank_kind == "personal" else self.home,
+            )
             return
         subjects = sorted({q.subject for q in self.questions})
         start = subject if subject in subjects else subjects[0]
@@ -1858,6 +2776,7 @@ class Application:
                 "topic": topic,
                 "difficulty": difficulty,
                 "count": count,
+                "bank_kind": self._practice_bank_kind,
             }
             self.start_quiz(questions)
         except ValueError as exc:
@@ -1875,7 +2794,9 @@ class Application:
             if not 0 <= seconds <= 86400:
                 raise ValueError(self.tr("限时必须为 0–86400 秒。"))
             self.progress.load()
-            self.engine = QuizEngine(questions, self.progress, review)
+            self.engine = QuizEngine(
+                questions, self.progress, review, learning_plan=self.learning_plan
+            )
         except ValueError as exc:
             messagebox.showerror(self.tr("无法开始练习"), self.tr(str(exc)), parent=self.root)
             return
@@ -2204,6 +3125,15 @@ class Application:
         except ValueError as exc:
             messagebox.showerror(self.tr("提交失败"), self.tr(str(exc)), parent=self.root)
             return
+        if self.engine.activity_warning:
+            messagebox.showwarning(
+                self.tr("学习计划未更新"),
+                self.tr(
+                    "答案和成绩已保存，但每日进度保存失败：{0}",
+                    self.engine.activity_warning,
+                ),
+                parent=self.root,
+            )
         self._submit_busy = True
         self._choices_locked = True
         self.submit_button.state(["disabled"])
@@ -2313,6 +3243,11 @@ class Application:
             return
         filters = self._last_filters or {}
         try:
+            bank_kind = filters.get("bank_kind", "public")
+            self.load_bank()
+            self.questions = (
+                self.personal_questions if bank_kind == "personal" else self.public_questions
+            )
             count = int(filters.get("count") or len(session.get("ids") or []) or 5)
             questions = select_questions(
                 self.questions,
@@ -2328,7 +3263,7 @@ class Application:
                 self.tr("请输入正整数题数并检查筛选条件。\n{0}", exc),
                 parent=self.root,
             )
-            self.configure(filters.get("subject"))
+            self.configure(filters.get("subject"), filters.get("bank_kind", "public"))
 
     def leave_quiz(self):
         if self.can_leave():

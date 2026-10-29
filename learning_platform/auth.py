@@ -182,3 +182,11 @@ class AuthService:
         # A generated UUID, never the username, is used as a directory name.
         account_id = str(UUID(user["id"]))
         return self.data_dir / "profiles" / account_id / "progress.json"
+
+    def personal_questions_path(self, user: dict) -> Path:
+        account_id = str(UUID(user["id"]))
+        return self.data_dir / "profiles" / account_id / "questions.json"
+
+    def learning_plan_path(self, user: dict) -> Path:
+        account_id = str(UUID(user["id"]))
+        return self.data_dir / "profiles" / account_id / "learning_plan.json"

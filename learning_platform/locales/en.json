@@ -301,5 +301,83 @@
   "导出失败": "Export failed",
   "导出完成": "Export complete",
   "导出 {0}": "Export {0}",
-  "本次练习尚未完成，退出后不会计入成绩历史。已经提交且答错的题目会保留在错题本，供以后复习。确定退出吗？": "This quiz is incomplete and will not enter score history if you leave. Submitted incorrect answers remain in the notebook for review. Leave now?"
+  "本次练习尚未完成，退出后不会计入成绩历史。已经提交且答错的题目会保留在错题本，供以后复习。确定退出吗？": "This quiz is incomplete and will not enter score history if you leave. Submitted incorrect answers remain in the notebook for review. Leave now?",
+  "公共题库练习": "Public bank practice",
+  "我的题库": "My question bank",
+  "每日学习计划": "Daily learning plan",
+  "今日进度": "Today's progress",
+  "还差题数": "Questions remaining",
+  "连续学习天数": "Study streak",
+  "最近 7 天": "Last 7 days",
+  "今日 {0} / {1} 题 · 还差 {2} 题 · 连续学习 {3} 天": "Today {0} / {1} · {2} remaining · {3}-day streak",
+  "最近 7 天：{0}": "Last 7 days: {0}",
+  "调整每日目标": "Change daily goal",
+  "每日目标": "Daily goal",
+  "请输入每天计划完成的题数（1–500）：": "Questions per day (1–500):",
+  "请先登录账户，再导入或使用个人题库。": "Sign in before importing or using a personal question bank.",
+  "个人题库仅属于当前账户，不会修改管理员维护的公共题库。支持 JSON 和 CSV；先校验预览，确认后才会保存。": "Your personal bank belongs only to this account and never changes the administrator-managed public bank. JSON and CSV are supported; files are validated and previewed before saving.",
+  "个人题库导入": "Personal question-bank import",
+  "上传文件": "Upload file",
+  "选择 JSON 或 CSV": "Choose JSON or CSV",
+  "自动校验": "Automatic validation",
+  "检查格式与重复题": "Check format and duplicates",
+  "查看有效与错误项目": "Review valid and invalid rows",
+  "确认合并": "Confirm merge",
+  "写入当前个人题库": "Save to this personal bank",
+  "选择题库文件开始导入": "Choose a question-bank file to begin",
+  "支持 .json 与 .csv；文件会先校验，不会直接覆盖现有题库。": "Supports .json and .csv. Files are validated first and never overwrite your bank directly.",
+  "等待选择文件": "Waiting for a file",
+  "选择 JSON / CSV 文件": "Choose JSON / CSV file",
+  "练习个人题库（{0} 题）": "Practice personal bank ({0})",
+  "题目 ID": "Question ID",
+  "结果 / 错误原因": "Result / error details",
+  "确认导入有效题目": "Import valid questions",
+  "选择题库文件": "Choose question-bank file",
+  "导入文件无效": "Invalid import file",
+  "有效": "Valid",
+  "重复": "Duplicate",
+  "错误": "Error",
+  "共 {0} 题 · 有效 {1} · 重复跳过 {2} · 错误 {3}": "Total {0} · Valid {1} · Duplicates skipped {2} · Errors {3}",
+  "确认导入": "Confirm import",
+  "将 {0} 道有效题目加入当前账户的个人题库？": "Add {0} valid questions to this account's personal bank?",
+  "导入失败": "Import failed",
+  "导入完成": "Import complete",
+  "已导入 {0} 道题；重复题目保持跳过。": "Imported {0} questions; duplicates remained skipped.",
+  "返回我的题库": "Back to my question bank",
+  "个人题库为空，请先导入 JSON 或 CSV 文件。": "Your personal bank is empty. Import a JSON or CSV file first.",
+  "学习计划未更新": "Learning plan not updated",
+  "答案和成绩已保存，但每日进度保存失败：{0}": "The answer and score were saved, but daily progress could not be updated: {0}"
+  ,"导入题库": "Import question bank"
+  ,"早上好": "Good morning"
+  ,"下午好": "Good afternoon"
+  ,"晚上好": "Good evening"
+  ,"今日目标": "Today's goal"
+  ,"题": "questions"
+  ,"已完成 {0}%": "{0}% complete"
+  ,"继续今日练习": "Continue today's practice"
+  ,"连续学习": "Study streak"
+  ,"{0} 天": "{0} days"
+  ,"一 二 三 四 五 六 日": "M T W T F S S"
+  ,"题 / 天": "questions / day"
+  ,"设置每日目标": "Set daily goal"
+  ,"调整": "Change"
+  ,"最近学习": "Recent study"
+  ,"{0} 题": "{0} questions"
+  ,"还没有学习记录，完成第一次练习后会显示在这里。": "No study records yet. Your first completed practice will appear here."
+  ,"选择文件": "Choose file"
+  ,"数据校验": "Validate data"
+  ,"预览确认": "Preview"
+  ,"合并完成": "Complete"
+  ,"▤  选择 JSON / CSV 文件": "▤  Choose JSON / CSV file"
+  ,"点击选择文件": "Click to choose a file"
+  ,"警告": "Warnings"
+  ,"共 {0} 条": "{0} records"
+  ,"导入后权限": "Access after import"
+  ,"仅自己可用": "Only me"
+  ,"共享给本机所有账户（需管理员批准）": "Share with all local users (admin approval required)"
+  ,"ⓘ 错误记录不会导入题库": "ⓘ Invalid records will not be imported"
+  ,"ⓘ 错误记录不会导入题库，可下载校验报告": "ⓘ Invalid records will not be imported; validation report available"
+  ,"合并 0 道有效题目": "Merge 0 valid questions"
+  ,"合并 {0} 道有效题目": "Merge {0} valid questions"
+  ,"返回修改": "Back to edit"
 }

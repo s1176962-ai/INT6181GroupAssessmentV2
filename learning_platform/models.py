@@ -1,6 +1,6 @@
 """Question schema and score calculations, independent of the GUI."""
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 
 def option_label(index: int) -> str:
@@ -28,6 +28,9 @@ class Question:
     explanation: str
     question_image: str | None = None
     option_images: list[str | None] | None = None
+
+    def to_dict(self):
+        return asdict(self)
 
     @classmethod
     def from_dict(cls, data):

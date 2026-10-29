@@ -47,7 +47,7 @@ def subject_image(root, subject):
 
 
 class QuizEngine:
-    def __init__(self, questions, repository, review=False):
+    def __init__(self, questions, repository, review=False, learning_plan=None, now=None):
         if not questions:
             raise ValueError("Cannot start an empty quiz")
         if len({q.id for q in questions}) != len(questions):
@@ -58,6 +58,9 @@ class QuizEngine:
         self.index = 0
         self.answers = []
         self.id = str(uuid4())
+        self.learning_plan = learning_plan
+        self.now = now or (lambda: datetime.now().astimezone())
+        self.activity_warning = None
 
     @property
     def current(self):
@@ -79,7 +82,8 @@ class QuizEngine:
             raise ValueError("Select an answer before submitting")
         correct = answer == q.answer
         data = self.repository.load()
-        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        submitted_at = self.now()
+        now = submitted_at.isoformat(timespec="seconds")
         if not correct:
             previous = data["wrong"].get(q.id, {}).get("count", 0)
             data["wrong"][q.id] = {"count": previous + 1, "last_answer": answer, "last_seen": now}
@@ -99,6 +103,11 @@ class QuizEngine:
         # Commit first: on a write error the same answer can safely be retried.
         self.repository.save(data)
         self.answers = answers
+        if self.learning_plan is not None:
+            try:
+                self.learning_plan.record_answer(f"{self.id}:{self.index}", submitted_at)
+            except ValueError as exc:
+                self.activity_warning = str(exc)
         return correct
 
     def finish_timeout(self):

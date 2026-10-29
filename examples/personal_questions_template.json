@@ -1,0 +1,15 @@
+[
+  {
+    "id": "PERSONAL001",
+    "subject": "Mathematics",
+    "topic": "Arithmetic",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What is 2 + 3?",
+    "options": ["4", "5", "6"],
+    "answer": "5",
+    "explanation": "2 + 3 = 5.",
+    "question_image": null,
+    "option_images": null
+  }
+]
