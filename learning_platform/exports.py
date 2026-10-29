@@ -4,7 +4,6 @@ import csv
 import io
 import os
 import tempfile
-from xml.sax.saxutils import escape
 
 
 def rows_for(kind, data, bank):
@@ -65,34 +64,9 @@ def export_progress(path, kind, format, data, bank):
         writer.writerows([[safe(v) for v in row] for row in rows])
         payload = stream.getvalue().encode("utf-8-sig")
     else:
-        try:
-            from reportlab.lib.styles import ParagraphStyle
-            from reportlab.pdfbase import pdfmetrics
-            from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-            from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
-        except ImportError as exc:
-            raise ValueError(
-                "PDF export requires reportlab. Run: python -m pip install -r requirements.txt"
-            ) from exc
-        pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
-        style = ParagraphStyle(
-            "report", fontName="STSong-Light", fontSize=10, leading=15, wordWrap="CJK"
-        )
-        stream = io.BytesIO()
-        story = [Paragraph("Quiz Studio - " + kind, style), Spacer(1, 16)]
-        for index, row in enumerate(rows, 1):
-            story.append(Paragraph(str(index) + ".", style))
-            for key, value in zip(keys, row):
-                story.append(
-                    Paragraph(escape(key + ": " + str(value)).replace("\n", "<br/>"), style)
-                )
-            story.append(Spacer(1, 14))
-        if not rows:
-            story.append(Paragraph("No records", style))
-        SimpleDocTemplate(
-            stream, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40
-        ).build(story)
-        payload = stream.getvalue()
+        from .pdf_report import build_report
+
+        payload = build_report(kind, data, bank)
     fd, temporary = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
     try:
         with os.fdopen(fd, "wb") as output:

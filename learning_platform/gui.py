@@ -350,6 +350,26 @@ class Application:
             padding=4,
         )
         style.map("TCheckbutton", background=[("active", HOVER)])
+        style.configure("TSpinbox", foreground="#111111", fieldbackground="#FFFFFF", insertcolor="#111111")
+        style.map("TSpinbox", foreground=[("!disabled", "#111111")], fieldbackground=[("!disabled", "#FFFFFF")])
+        self.check_images = []
+        for selected in (False, True):
+            icon = tk.PhotoImage(master=root, width=18, height=18)
+            icon.put("#FFFFFF", to=(0, 0, 18, 18))
+            icon.put("#526675", to=(0, 0, 18, 2))
+            icon.put("#526675", to=(0, 16, 18, 18))
+            icon.put("#526675", to=(0, 0, 2, 18))
+            icon.put("#526675", to=(16, 0, 18, 18))
+            if selected:
+                for x, y in [(4, 8), (5, 9), (6, 10), (7, 11), (8, 10), (9, 9), (10, 8), (11, 7), (12, 6), (13, 5)]:
+                    icon.put("#137C72", to=(x, y, x + 2, y + 2))
+            self.check_images.append(icon)
+        if "Checkmark.indicator" not in style.element_names():
+            style.element_create("Checkmark.indicator", "image", self.check_images[0], ("selected", self.check_images[1]))
+        style.layout("TCheckbutton", [("Checkbutton.padding", {"sticky": "nswe", "children": [
+            ("Checkmark.indicator", {"side": "left", "sticky": ""}),
+            ("Checkbutton.label", {"side": "left", "sticky": "nswe"})]})])
+
         style.configure(
             "Treeview",
             background=SURFACE,
