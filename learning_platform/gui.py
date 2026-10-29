@@ -13,8 +13,8 @@ from .display import DisplaySettings, window_size
 from .editor_ui import EditorPage
 from .i18n import Translator
 from .importing import QuestionImportService
-from .motion import Motion
 from .models import option_label
+from .motion import Motion
 from .repositories import (
     LearningPlanRepository,
     PersonalQuestionRepository,
@@ -26,25 +26,25 @@ from .storage import DataError
 from .ui_tokens import (
     BG,
     BORDER,
+    BUTTON_FILL,
+    BUTTON_INK,
     CARD_WIDTH,
-    CONTENT_MAX,
-    PAGE_PAD,
     COLOR_PRIMARY_DARK,
+    CONTENT_MAX,
     ERROR,
     ERROR_BG,
     FONT,
+    HIT,
     HOVER,
     INFO_BG,
-    ROW_H,
-    WARNING,
-    WARNING_BG,
     MUTED,
     ON_PRIMARY,
+    PAGE_PAD,
     PRIMARY,
-    PRIMARY_ACTIVE,
     PRIMARY_DISABLED,
     PRIMARY_HOVER,
     PROGRESS_H,
+    ROW_H,
     SELECTED_BG,
     SHADOW_CARD,
     SKY,
@@ -55,8 +55,6 @@ from .ui_tokens import (
     SPACE_5,
     SPACE_6,
     SPLIT_WIDE,
-    BUTTON_FILL,
-    BUTTON_INK,
     SUCCESS_BG,
     SUCCESS_FG,
     SURFACE,
@@ -69,10 +67,11 @@ from .ui_tokens import (
     TYPE_HINT,
     TYPE_LABEL,
     TYPE_MARK,
+    TYPE_NUM,
     TYPE_TITLE,
     TYPE_TOOL,
-    TYPE_NUM,
-    HIT,
+    WARNING,
+    WARNING_BG,
 )
 from .user_ui import UserPage
 from .widgets import bind_whole, card_frame, subject_icon
@@ -134,9 +133,7 @@ class Application:
         root.bind("<Destroy>", self._on_root_destroy, add="+")
         self._style(root)
         self.chrome = ttk.Frame(root, style="Shell.TFrame", padding=(20, 14))
-        self.chrome_title = ttk.Label(
-            self.chrome, text=self.tr("首页"), style="Shell.TLabel"
-        )
+        self.chrome_title = ttk.Label(self.chrome, text=self.tr("首页"), style="Shell.TLabel")
         self.chrome_title.pack(side="left")
         self.timer_label = ttk.Label(self.chrome, text="", style="Shell.TLabel")
         self.timer_label.pack(side="left", padx=12)
@@ -162,14 +159,24 @@ class Application:
         self.scrollbar = ttk.Scrollbar(outer, orient="vertical", command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.canvas.pack(side="left", fill="both", expand=True)
-        self.body = ttk.Frame(self.canvas, style="App.TFrame", padding=(12, 10) if self.display["compact"] else (24, 20))
+        self.body = ttk.Frame(
+            self.canvas,
+            style="App.TFrame",
+            padding=(12, 10) if self.display["compact"] else (24, 20),
+        )
         self.window = self.canvas.create_window((0, 0), window=self.body, anchor="n")
         self.body.bind(
             "<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         )
         self.canvas.bind("<Configure>", self._on_canvas_configure)
-        root.bind("<MouseWheel>", lambda e: self.canvas.yview_scroll(-int(e.delta / 120), "units"))
-        root.bind("<Configure>", lambda e: self._layout_login() if e.widget is root else None, add="+")
+        root.bind("<MouseWheel>", self._page_wheel)
+        root.bind_class("TCombobox", "<MouseWheel>", self._control_wheel)
+        root.bind_class("TSpinbox", "<MouseWheel>", self._control_wheel)
+        root.bind_class("TCombobox", "<Button-4>", self._control_wheel)
+        root.bind_class("TCombobox", "<Button-5>", self._control_wheel)
+        root.bind(
+            "<Configure>", lambda e: self._layout_login() if e.widget is root else None, add="+"
+        )
         self.load_bank()
         self.login_page()
 
@@ -187,6 +194,15 @@ class Application:
     def _style(self, root):
         style = ttk.Style(root)
         style.theme_use("clam")
+        style.layout(
+            "CardOption.TRadiobutton",
+            [
+                (
+                    "Radiobutton.padding",
+                    {"sticky": "nswe", "children": [("Radiobutton.label", {"sticky": "nswe"})]},
+                )
+            ],
+        )
         style.configure(".", font=(FONT, 11), background=BG, foreground=TEXT)
         style.configure("App.TFrame", background=BG)
         style.configure("Card.TFrame", background=CARD)
@@ -296,7 +312,9 @@ class Application:
             bordercolor=CARD,
             relief="flat",
         )
-        style.map("Link.TButton", foreground=[("active", PRIMARY_DARK)], background=[("active", CARD)])
+        style.map(
+            "Link.TButton", foreground=[("active", PRIMARY_DARK)], background=[("active", CARD)]
+        )
         style.configure(
             "Ghost.TButton",
             padding=(8, 4),
@@ -339,7 +357,9 @@ class Application:
             lightcolor=ERROR_FG,
             darkcolor=ERROR_FG,
         )
-        style.configure("TRadiobutton", background=CARD, foreground=TEXT, font=(FONT, 11), padding=6)
+        style.configure(
+            "TRadiobutton", background=CARD, foreground=TEXT, font=(FONT, 11), padding=6
+        )
         style.map("TRadiobutton", background=[("active", RAISED)])
         style.configure("TLabelframe", background=CARD, bordercolor=BORDER, relief="solid")
         style.configure(
@@ -363,8 +383,14 @@ class Application:
             padding=4,
         )
         style.map("TCheckbutton", background=[("active", HOVER)])
-        style.configure("TSpinbox", foreground="#111111", fieldbackground="#FFFFFF", insertcolor="#111111")
-        style.map("TSpinbox", foreground=[("!disabled", "#111111")], fieldbackground=[("!disabled", "#FFFFFF")])
+        style.configure(
+            "TSpinbox", foreground="#111111", fieldbackground="#FFFFFF", insertcolor="#111111"
+        )
+        style.map(
+            "TSpinbox",
+            foreground=[("!disabled", "#111111")],
+            fieldbackground=[("!disabled", "#FFFFFF")],
+        )
         self.check_images = []
         for selected in (False, True):
             icon = tk.PhotoImage(master=root, width=18, height=18)
@@ -374,14 +400,42 @@ class Application:
             icon.put("#526675", to=(0, 0, 2, 18))
             icon.put("#526675", to=(16, 0, 18, 18))
             if selected:
-                for x, y in [(4, 8), (5, 9), (6, 10), (7, 11), (8, 10), (9, 9), (10, 8), (11, 7), (12, 6), (13, 5)]:
+                for x, y in [
+                    (4, 8),
+                    (5, 9),
+                    (6, 10),
+                    (7, 11),
+                    (8, 10),
+                    (9, 9),
+                    (10, 8),
+                    (11, 7),
+                    (12, 6),
+                    (13, 5),
+                ]:
                     icon.put("#137C72", to=(x, y, x + 2, y + 2))
             self.check_images.append(icon)
         if "Checkmark.indicator" not in style.element_names():
-            style.element_create("Checkmark.indicator", "image", self.check_images[0], ("selected", self.check_images[1]))
-        style.layout("TCheckbutton", [("Checkbutton.padding", {"sticky": "nswe", "children": [
-            ("Checkmark.indicator", {"side": "left", "sticky": ""}),
-            ("Checkbutton.label", {"side": "left", "sticky": "nswe"})]})])
+            style.element_create(
+                "Checkmark.indicator",
+                "image",
+                self.check_images[0],
+                ("selected", self.check_images[1]),
+            )
+        style.layout(
+            "TCheckbutton",
+            [
+                (
+                    "Checkbutton.padding",
+                    {
+                        "sticky": "nswe",
+                        "children": [
+                            ("Checkmark.indicator", {"side": "left", "sticky": ""}),
+                            ("Checkbutton.label", {"side": "left", "sticky": "nswe"}),
+                        ],
+                    },
+                )
+            ],
+        )
 
         style.configure(
             "Treeview",
@@ -406,8 +460,12 @@ class Application:
             background=[("selected", SELECTED_BG)],
             foreground=[("selected", TEXT)],
         )
-        style.configure("Vertical.TScrollbar", background=HOVER, troughcolor=TRACK, bordercolor=BORDER)
-        style.configure("Horizontal.TScrollbar", background=HOVER, troughcolor=TRACK, bordercolor=BORDER)
+        style.configure(
+            "Vertical.TScrollbar", background=HOVER, troughcolor=TRACK, bordercolor=BORDER
+        )
+        style.configure(
+            "Horizontal.TScrollbar", background=HOVER, troughcolor=TRACK, bordercolor=BORDER
+        )
         style.configure("TNotebook", background=BG, bordercolor=BORDER)
         style.configure("TNotebook.Tab", background=HOVER, foreground=TEXT, padding=(12, 8))
         style.map("TNotebook.Tab", background=[("selected", SURFACE)])
@@ -432,9 +490,7 @@ class Application:
             bg="#0D1014",
             fg=TEXT,
             font=(FONT, 15, "bold"),
-        ).pack(
-            anchor="w", padx=28, pady=(24, 24)
-        )
+        ).pack(anchor="w", padx=28, pady=(24, 24))
         self._nav_buttons = {}
         items = (
             ("home", "⌂", "首页", self.home),
@@ -486,7 +542,9 @@ class Application:
         self.nav_user.bind("<Button-1>", lambda _e: self._account_menu())
         self.nav_user.bind("<Enter>", lambda _e: self.nav_user.configure(bg=HOVER))
         self.nav_user.bind("<Leave>", lambda _e: self.nav_user.configure(bg="#0D1014"))
-        self._account_popup = tk.Menu(self.root, tearoff=0, bg=SURFACE, fg=TEXT, activebackground=HOVER)
+        self._account_popup = tk.Menu(
+            self.root, tearoff=0, bg=SURFACE, fg=TEXT, activebackground=HOVER
+        )
         self._paint_nav()
 
     def _account_menu(self):
@@ -644,11 +702,24 @@ class Application:
             width * 0.40, 28, width * 0.62, height - 14, outline=PRIMARY, width=2
         )
         canvas.create_line(
-            width * 0.70, height - 18, width * 0.82, 24, width * 0.90, height - 18, fill=PRIMARY, width=2
+            width * 0.70,
+            height - 18,
+            width * 0.82,
+            24,
+            width * 0.90,
+            height - 18,
+            fill=PRIMARY,
+            width=2,
         )
-        canvas.create_text(width * 0.23, height / 2, text="Aa", fill=PRIMARY, font=(FONT, 12, "bold"))
-        canvas.create_text(width * 0.51, height / 2, text="123", fill=PRIMARY, font=(FONT, 11, "bold"))
-        canvas.create_text(width * 0.81, height / 2 + 4, text="Sci", fill=PRIMARY, font=(FONT, 10, "bold"))
+        canvas.create_text(
+            width * 0.23, height / 2, text="Aa", fill=PRIMARY, font=(FONT, 12, "bold")
+        )
+        canvas.create_text(
+            width * 0.51, height / 2, text="123", fill=PRIMARY, font=(FONT, 11, "bold")
+        )
+        canvas.create_text(
+            width * 0.81, height / 2 + 4, text="Sci", fill=PRIMARY, font=(FONT, 10, "bold")
+        )
 
     def _apply_login_language(self, language):
         try:
@@ -664,7 +735,9 @@ class Application:
         show = "" if self.show_password else "•"
         for entry in self.password_entries:
             entry.configure(show=show)
-        self.password_toggle.configure(text=self.tr("隐藏") if self.show_password else self.tr("显示"))
+        self.password_toggle.configure(
+            text=self.tr("隐藏") if self.show_password else self.tr("显示")
+        )
 
     def _field_border(self, widget, color, fill=None):
         shell = getattr(widget, "_shell", widget)
@@ -684,7 +757,9 @@ class Application:
     def _mark_login_error(self, message, fields=None):
         self.login_error.configure(text=message)
         if not self.login_error.winfo_ismapped():
-            self.login_error.pack(anchor="w", fill="x", before=self.login_button._shell, pady=(0, SPACE_SM))
+            self.login_error.pack(
+                anchor="w", fill="x", before=self.login_button._shell, pady=(0, SPACE_SM)
+            )
         targets = fields or list(getattr(self, "login_fields", []))
         self._login_error_fields = set(targets)
         for entry in getattr(self, "login_fields", []):
@@ -722,11 +797,15 @@ class Application:
 
         def enter(_e):
             if str(button["state"]) == "normal":
-                button.configure(bg=hover, fg=hover_fg, activebackground=hover, activeforeground=hover_fg)
+                button.configure(
+                    bg=hover, fg=hover_fg, activebackground=hover, activeforeground=hover_fg
+                )
 
         def leave(_e):
             if str(button["state"]) == "normal":
-                button.configure(bg=idle, fg=idle_fg, activebackground=active, activeforeground=hover_fg)
+                button.configure(
+                    bg=idle, fg=idle_fg, activebackground=active, activeforeground=hover_fg
+                )
 
         def press(_e):
             if str(button["state"]) == "normal":
@@ -766,7 +845,9 @@ class Application:
         return color
 
     def _tool_button(self, parent, text, command):
-        button = self._flat_button(parent, text, command, TYPE_TOOL, BG, TEXT, SPACE_3, max(8, (HIT - 18) // 2))
+        button = self._flat_button(
+            parent, text, command, TYPE_TOOL, BG, TEXT, SPACE_3, max(8, (HIT - 18) // 2)
+        )
         self._bind_chrome(button, BG, HOVER, TRACK, TEXT)
         button._button = button
         return button
@@ -788,7 +869,9 @@ class Application:
 
     def _primary_button(self, parent, text, command):
         shell = tk.Frame(parent, bg=BUTTON_FILL, highlightthickness=0, bd=0)
-        button = self._flat_button(shell, text, command, TYPE_BUTTON, BUTTON_FILL, BUTTON_INK, 16, 12)
+        button = self._flat_button(
+            shell, text, command, TYPE_BUTTON, BUTTON_FILL, BUTTON_INK, 16, 12
+        )
         button.configure(anchor="center", justify="center")
         shell.configure(height=48)
         shell.pack_propagate(False)
@@ -863,7 +946,9 @@ class Application:
         self.brand = tk.Frame(self.login_split, bg=SKY, padx=SPACE_XL, pady=SPACE_XL)
         brand_inner = tk.Frame(self.brand, bg=SKY)
         brand_inner.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.86)
-        ttk.Label(brand_inner, text=self.tr("Quiz App"), style="BrandMark.TLabel").pack(anchor="center")
+        ttk.Label(brand_inner, text=self.tr("Quiz App"), style="BrandMark.TLabel").pack(
+            anchor="center"
+        )
         title = ttk.Label(
             brand_inner,
             text=self.tr("每天进步一点点，让学习变得更有趣。"),
@@ -873,7 +958,9 @@ class Application:
             anchor="center",
         )
         title.pack(anchor="center", pady=(SPACE_2, SPACE_5))
-        brand_inner.bind("<Configure>", lambda e: title.configure(wraplength=max(e.width - SPACE_MD, 200)))
+        brand_inner.bind(
+            "<Configure>", lambda e: title.configure(wraplength=max(e.width - SPACE_MD, 200))
+        )
         art = tk.Canvas(brand_inner, height=96, bg=SKY, highlightthickness=0, bd=0)
         art.pack(fill="x", pady=(0, SPACE_4))
         self._draw_login_art(art)
@@ -915,7 +1002,9 @@ class Application:
                 fg=TEXT,
                 font=TYPE_NUM,
             ).pack(side="right")
-            bar = tk.Canvas(row, height=PROGRESS_H, bg=SURFACE, highlightthickness=0, bd=0, takefocus=0)
+            bar = tk.Canvas(
+                row, height=PROGRESS_H, bg=SURFACE, highlightthickness=0, bd=0, takefocus=0
+            )
             bar.pack(fill="x", pady=(SPACE_1, 0))
             percent = round(count / total_bank * 100)
             bar.bind(
@@ -924,7 +1013,9 @@ class Application:
             )
         tk.Label(
             brand_inner,
-            text=self.tr("登录后继续个人错题本和学习历史，题库学科为 English、Mathematics、Science。"),
+            text=self.tr(
+                "登录后继续个人错题本和学习历史，题库学科为 English、Mathematics、Science。"
+            ),
             bg=SKY,
             fg=MUTED,
             font=TYPE_FOOT,
@@ -938,16 +1029,22 @@ class Application:
         self.login_tools.pack(fill="x", pady=(0, SPACE_MD))
         self._tool_button(self.login_tools, self.tr("退出"), self.close).pack(side="right")
         lang_menu = tk.Menu(self.root, tearoff=0, bg=SURFACE, fg=TEXT, activebackground=HOVER, bd=0)
-        lang_menu.add_command(label=self.tr("简体中文"), command=lambda: self._apply_login_language("zh"))
+        lang_menu.add_command(
+            label=self.tr("简体中文"), command=lambda: self._apply_login_language("zh")
+        )
         lang_menu.add_command(label="English", command=lambda: self._apply_login_language("en"))
         lang = self._tool_button(
             self.login_tools, "中文 ▾" if self.tr.language == "zh" else "EN ▾", lambda: None
         )
         lang._button.configure(
-            command=lambda: lang_menu.tk_popup(lang.winfo_rootx(), lang.winfo_rooty() + lang.winfo_height())
+            command=lambda: lang_menu.tk_popup(
+                lang.winfo_rootx(), lang.winfo_rooty() + lang.winfo_height()
+            )
         )
         lang.pack(side="right", padx=(0, SPACE_2))
-        self._tool_button(self.login_tools, self.tr("设置"), self.settings).pack(side="right", padx=(0, SPACE_2))
+        self._tool_button(self.login_tools, self.tr("设置"), self.settings).pack(
+            side="right", padx=(0, SPACE_2)
+        )
         card = tk.Frame(
             self.login_form,
             bg=SURFACE,
@@ -977,7 +1074,9 @@ class Application:
         self.login_password = tk.StringVar()
         self.login_confirm = tk.StringVar()
         self.password_entries = []
-        tk.Label(card, text=self.tr("用户名"), font=TYPE_LABEL, bg=SURFACE, fg=TEXT).pack(anchor="w")
+        tk.Label(card, text=self.tr("用户名"), font=TYPE_LABEL, bg=SURFACE, fg=TEXT).pack(
+            anchor="w"
+        )
         name_entry = self._text_entry(card, self.login_name)
         name_entry._shell.pack(anchor="w", fill="x", pady=(SPACE_XS, SPACE_MD))
         tk.Label(card, text=self.tr("密码"), font=TYPE_LABEL, bg=SURFACE, fg=TEXT).pack(anchor="w")
@@ -1001,11 +1100,15 @@ class Application:
         password_entry._shell = password_box
         password_entry.pack(side="left", fill="x", expand=True, ipady=12, padx=SPACE_SM)
         self.password_entries.append(password_entry)
-        self.password_toggle = self._text_button(password_inner, self.tr("显示"), self._toggle_password)
+        self.password_toggle = self._text_button(
+            password_inner, self.tr("显示"), self._toggle_password
+        )
         self.password_toggle.configure(padx=SPACE_3, pady=11)
         self.password_toggle.pack(side="right", padx=SPACE_SM)
         if registering:
-            tk.Label(card, text=self.tr("确认密码"), font=TYPE_LABEL, bg=SURFACE, fg=TEXT).pack(anchor="w")
+            tk.Label(card, text=self.tr("确认密码"), font=TYPE_LABEL, bg=SURFACE, fg=TEXT).pack(
+                anchor="w"
+            )
             confirm = self._text_entry(card, self.login_confirm, show="•")
             confirm._shell.pack(anchor="w", fill="x", pady=(SPACE_XS, SPACE_MD))
             self.password_entries.append(confirm)
@@ -1030,10 +1133,16 @@ class Application:
         account_row = tk.Frame(card, bg=SURFACE)
         account_row.pack(anchor="w")
         if registering:
-            self._text_button(account_row, self.tr("已有账户，去登录"), lambda: self.login_page(False)).pack(side="left")
+            self._text_button(
+                account_row, self.tr("已有账户，去登录"), lambda: self.login_page(False)
+            ).pack(side="left")
         else:
-            tk.Label(account_row, text=self.tr("还没有账户？"), font=TYPE_HINT, bg=SURFACE, fg=MUTED).pack(side="left")
-            self._text_button(account_row, self.tr("创建账户"), lambda: self.login_page(True)).pack(side="left", padx=(SPACE_XS, 0))
+            tk.Label(
+                account_row, text=self.tr("还没有账户？"), font=TYPE_HINT, bg=SURFACE, fg=MUTED
+            ).pack(side="left")
+            self._text_button(account_row, self.tr("创建账户"), lambda: self.login_page(True)).pack(
+                side="left", padx=(SPACE_XS, 0)
+            )
         guest = tk.Frame(self.login_form, bg=BG)
         guest.pack(fill="x", pady=(SPACE_MD, 0))
         guest_btn = self._text_button(guest, self.tr("以访客身份继续"), self.enter_guest, bg=BG)
@@ -1048,7 +1157,9 @@ class Application:
             anchor="center",
         ).pack(fill="x", pady=(SPACE_SM, 0))
         if self.tr.warning:
-            tk.Label(guest, text=self.tr.warning, font=TYPE_HINT, bg=BG, fg=MUTED, wraplength=CARD_WIDTH).pack(pady=SPACE_SM)
+            tk.Label(
+                guest, text=self.tr.warning, font=TYPE_HINT, bg=BG, fg=MUTED, wraplength=CARD_WIDTH
+            ).pack(pady=SPACE_SM)
         for widget in self.login_fields:
             widget.bind("<Return>", lambda e, mode=registering: self.authenticate(mode))
             widget.bind("<Key>", self._clear_login_error)
@@ -1120,9 +1231,7 @@ class Application:
         self._login_busy = False
         self.user = payload
         self.progress = ProgressRepository(self.auth.progress_path(payload))
-        self.personal_bank = PersonalQuestionRepository(
-            self.auth.personal_questions_path(payload)
-        )
+        self.personal_bank = PersonalQuestionRepository(self.auth.personal_questions_path(payload))
         self.learning_plan = LearningPlanRepository(self.auth.learning_plan_path(payload))
         self.home()
 
@@ -1202,9 +1311,9 @@ class Application:
         card = ttk.LabelFrame(self.body, text=self.tr("界面语言"), padding=16)
         card.pack(fill="x", pady=8)
         self.language = tk.StringVar(value=self.tr.language)
-        ttk.Radiobutton(
-            card, text=self.tr("简体中文"), variable=self.language, value="zh"
-        ).pack(anchor="w")
+        ttk.Radiobutton(card, text=self.tr("简体中文"), variable=self.language, value="zh").pack(
+            anchor="w"
+        )
         ttk.Radiobutton(card, text="English", variable=self.language, value="en").pack(anchor="w")
         ttk.Label(
             card,
@@ -1215,9 +1324,9 @@ class Application:
         motion = ttk.LabelFrame(self.body, text=self.tr("动画效果"), padding=16)
         motion.pack(fill="x", pady=8)
         self.motion_choice = tk.BooleanVar(value=self.motion.enabled)
-        ttk.Radiobutton(
-            motion, text=self.tr("开启"), variable=self.motion_choice, value=True
-        ).pack(anchor="w")
+        ttk.Radiobutton(motion, text=self.tr("开启"), variable=self.motion_choice, value=True).pack(
+            anchor="w"
+        )
         ttk.Radiobutton(
             motion, text=self.tr("关闭"), variable=self.motion_choice, value=False
         ).pack(anchor="w")
@@ -1230,25 +1339,41 @@ class Application:
         self.button(self.tr("保存语言设置"), self.save_language, "Accent.TButton")
         self.label(self.tr("窗口与布局"))
         self.window_choices = [self.tr("自动适应屏幕"), "960x640", "1080x720", "1280x800"]
-        self.window_choice = tk.StringVar(value=self.window_choices[0] if self.display["size"] == "auto" else self.display["size"])
-        ttk.Combobox(self.body, textvariable=self.window_choice, values=self.window_choices, state="readonly").pack(anchor="w", pady=4)
+        self.window_choice = tk.StringVar(
+            value=self.window_choices[0] if self.display["size"] == "auto" else self.display["size"]
+        )
+        ttk.Combobox(
+            self.body, textvariable=self.window_choice, values=self.window_choices, state="readonly"
+        ).pack(anchor="w", pady=4)
         self.compact_choice = tk.BooleanVar(value=self.display["compact"])
-        ttk.Checkbutton(self.body, text=self.tr("紧凑页边距"), variable=self.compact_choice).pack(anchor="w", pady=4)
+        ttk.Checkbutton(self.body, text=self.tr("紧凑页边距"), variable=self.compact_choice).pack(
+            anchor="w", pady=4
+        )
         self.label(self.tr("调整程序窗口大小，不改变电脑分辨率。"))
+        self.wheel_choice = tk.BooleanVar(value=self.display.get("wheel_controls", False))
+        ttk.Checkbutton(
+            self.body, text=self.tr("允许滚轮更改下拉选项和题数"), variable=self.wheel_choice
+        ).pack(anchor="w", pady=4)
         self.button(self.tr("应用窗口与布局"), self.save_display, "Accent.TButton")
         if self.display_warning:
             self.label(self.display_warning)
         self.button(self.tr("返回"), self.home if self.signed_in else self.login_page)
 
     def apply_window_size(self):
-        width, height = window_size(self.display["size"], self.root.winfo_screenwidth(), self.root.winfo_screenheight())
+        width, height = window_size(
+            self.display["size"], self.root.winfo_screenwidth(), self.root.winfo_screenheight()
+        )
         self.root.minsize(min(720, width), min(480, height))
         self.root.geometry(f"{width}x{height}")
 
     def save_display(self):
-        size = "auto" if self.window_choice.get() == self.window_choices[0] else self.window_choice.get()
+        size = (
+            "auto"
+            if self.window_choice.get() == self.window_choices[0]
+            else self.window_choice.get()
+        )
         try:
-            self.display_store.save(size, self.compact_choice.get())
+            self.display_store.save(size, self.compact_choice.get(), self.wheel_choice.get())
         except (ValueError, DataError) as exc:
             messagebox.showerror(self.tr("保存失败"), str(exc), parent=self.root)
             return
@@ -1270,11 +1395,48 @@ class Application:
         self.root.title(self.tr("Quiz App"))
         self.settings()
 
+    def _control_wheel(self, event):
+        if not self.display.get("wheel_controls", False):
+            return "break"
+        widget = event.widget
+        direction = -1 if getattr(event, "delta", 0) > 0 or getattr(event, "num", None) == 4 else 1
+        if isinstance(widget, ttk.Combobox):
+            values = widget["values"]
+            if values:
+                widget.current(max(0, min(len(values) - 1, widget.current() + direction)))
+                widget.event_generate("<<ComboboxSelected>>")
+        elif isinstance(widget, ttk.Spinbox):
+            try:
+                value = max(
+                    float(widget.cget("from")),
+                    min(float(widget.cget("to")), float(widget.get()) - direction),
+                )
+                widget.set(str(int(value)))
+            except ValueError:
+                pass
+        return "break"
+
+    def _page_wheel(self, event):
+        if isinstance(event.widget, (ttk.Combobox, ttk.Spinbox, tk.Text, ttk.Treeview)):
+            return
+        self.canvas.yview_scroll(-int(event.delta / 120), "units")
+
+    def _action_dock(self):
+        self.action_dock = ttk.Frame(self.outer, style="App.TFrame", padding=(16, 10))
+        self.action_dock.pack(side="bottom", fill="x", before=self.canvas)
+        return self.action_dock
+
     def clear(self, title, heading=True, show_heading=True):
         if self._login_after:
             self.root.after_cancel(self._login_after)
             self._login_after = None
         self.motion.cancel()
+        if getattr(self, "action_dock", None) is not None:
+            self.action_dock.destroy()
+            self.action_dock = None
+        if getattr(self, "quiz_progress_header", None) is not None:
+            self.quiz_progress_header.destroy()
+            self.quiz_progress_header = None
         self._unbind_quiz_keys()
         self._show_scroll_shell(True)
         for widget in self.body.winfo_children():
@@ -1388,16 +1550,13 @@ class Application:
             self.personal_questions = []
         self.questions = self.public_questions
         self.by_id = {
-            question.id: question
-            for question in [*self.public_questions, *self.personal_questions]
+            question.id: question for question in [*self.public_questions, *self.personal_questions]
         }
 
     def _plan_ring(self, parent, plan):
         """Render the concept mock-up's circular daily-goal indicator."""
         size = 152
-        canvas = tk.Canvas(
-            parent, width=size, height=size, bg=SURFACE, highlightthickness=0, bd=0
-        )
+        canvas = tk.Canvas(parent, width=size, height=size, bg=SURFACE, highlightthickness=0, bd=0)
         canvas.create_oval(15, 15, size - 15, size - 15, outline=TRACK, width=12)
         if plan["percent"]:
             canvas.create_arc(
@@ -1418,9 +1577,7 @@ class Application:
             fill=TEXT,
             font=(FONT, 18, "bold"),
         )
-        canvas.create_text(
-            size / 2, 91, text=self.tr("今日进度"), fill=MUTED, font=TYPE_HINT
-        )
+        canvas.create_text(size / 2, 91, text=self.tr("今日进度"), fill=MUTED, font=TYPE_HINT)
         canvas.create_text(
             size / 2,
             112,
@@ -1443,9 +1600,7 @@ class Application:
         for index, item in enumerate(weekly):
             center = 12 + gap * index + gap / 2
             bar_height = (
-                0
-                if not item["count"]
-                else max(7, item["count"] / maximum * (baseline - top))
+                0 if not item["count"] else max(7, item["count"] / maximum * (baseline - top))
             )
             canvas.create_rectangle(
                 center - 10,
@@ -1573,9 +1728,9 @@ class Application:
                     fg=TEXT,
                     font=(FONT, 15, "bold"),
                 ).pack(side="left")
-                tk.Label(
-                    stat, text=title, bg=HOVER, fg=MUTED, font=TYPE_HINT
-                ).pack(side="left", padx=(9, 0))
+                tk.Label(stat, text=title, bg=HOVER, fg=MUTED, font=TYPE_HINT).pack(
+                    side="left", padx=(9, 0)
+                )
             chart = tk.Frame(dashboard, bg=SURFACE)
             chart.pack(side="left", fill="both", expand=True)
             tk.Label(
@@ -1605,19 +1760,30 @@ class Application:
         if bank_error:
             empty = card_frame(feed, pad=16)
             empty.pack(fill="x")
-            tk.Label(empty, text=self.tr("学习数据加载失败"), bg=SURFACE, fg=TEXT, font=(FONT, 13, "bold")).pack(
-                anchor="w"
-            )
-            tk.Label(empty, text=self.tr(bank_error), bg=SURFACE, fg=MUTED, wraplength=520, justify="left").pack(
-                anchor="w", pady=8
-            )
-            ttk.Button(empty, text=self.tr("重新加载题库"), command=self.home, style="Accent.TButton").pack(anchor="w")
+            tk.Label(
+                empty,
+                text=self.tr("学习数据加载失败"),
+                bg=SURFACE,
+                fg=TEXT,
+                font=(FONT, 13, "bold"),
+            ).pack(anchor="w")
+            tk.Label(
+                empty,
+                text=self.tr(bank_error),
+                bg=SURFACE,
+                fg=MUTED,
+                wraplength=520,
+                justify="left",
+            ).pack(anchor="w", pady=8)
+            ttk.Button(
+                empty, text=self.tr("重新加载题库"), command=self.home, style="Accent.TButton"
+            ).pack(anchor="w")
         elif not history:
             empty = card_frame(feed, pad=16)
             empty.pack(fill="x")
-            tk.Label(empty, text=self.tr("还没有学习记录"), bg=SURFACE, fg=TEXT, font=(FONT, 13, "bold")).pack(
-                anchor="w"
-            )
+            tk.Label(
+                empty, text=self.tr("还没有学习记录"), bg=SURFACE, fg=TEXT, font=(FONT, 13, "bold")
+            ).pack(anchor="w")
             tk.Label(
                 empty,
                 text=self.tr("完成第一次练习后，学习动态会显示在这里。"),
@@ -1626,9 +1792,12 @@ class Application:
                 wraplength=520,
                 justify="left",
             ).pack(anchor="w", pady=8)
-            ttk.Button(empty, text=self.tr("开始第一次练习"), command=self.configure, style="Accent.TButton").pack(
-                anchor="w"
-            )
+            ttk.Button(
+                empty,
+                text=self.tr("开始第一次练习"),
+                command=self.configure,
+                style="Accent.TButton",
+            ).pack(anchor="w")
         for record in list(reversed(history))[:6]:
             post = card_frame(feed, pad=14)
             post.pack(fill="x", pady=(0, 10))
@@ -1641,7 +1810,9 @@ class Application:
             ).pack(anchor="w")
             tk.Label(
                 post,
-                text=self.tr("完成了 {0} · 正确率 {1}%", record["subject"], f"{record['accuracy']:.0f}"),
+                text=self.tr(
+                    "完成了 {0} · 正确率 {1}%", record["subject"], f"{record['accuracy']:.0f}"
+                ),
                 bg=SURFACE,
                 fg=TEXT,
                 font=TYPE_BODY,
@@ -1657,10 +1828,15 @@ class Application:
             ).pack(anchor="w", pady=(0, 8))
             actions = tk.Frame(post, bg=SURFACE)
             actions.pack(anchor="w")
-            self._text_button(actions, self.tr("查看详情"), self.history, bg=SURFACE).pack(side="left", padx=(0, 12))
+            self._text_button(actions, self.tr("查看详情"), self.history, bg=SURFACE).pack(
+                side="left", padx=(0, 12)
+            )
             subject_name = record["subject"].split(",")[0].strip()
             self._text_button(
-                actions, self.tr("再练一次"), lambda value=subject_name: self.configure(value), bg=SURFACE
+                actions,
+                self.tr("再练一次"),
+                lambda value=subject_name: self.configure(value),
+                bg=SURFACE,
             ).pack(side="left")
         search_shell = tk.Frame(rail, bg=SURFACE, highlightthickness=1, highlightbackground=BORDER)
         search_shell.pack(fill="x", pady=(0, 8))
@@ -1728,7 +1904,9 @@ class Application:
         for subject in subjects:
             row = card_frame(rail, pad=12)
             row.pack(fill="x", pady=(0, 8))
-            tk.Label(row, text=subject, bg=SURFACE, fg=TEXT, font=(FONT, 12, "bold")).pack(anchor="w")
+            tk.Label(row, text=subject, bg=SURFACE, fg=TEXT, font=(FONT, 12, "bold")).pack(
+                anchor="w"
+            )
             tk.Label(
                 row,
                 text=self.tr("{0} 道题", counts.get(subject, 0)),
@@ -1749,7 +1927,9 @@ class Application:
                 row, self.tr("开始练习"), lambda value=subject: self.configure(value), bg=SURFACE
             ).pack(anchor="w")
             self._subject_rows.append((subject.lower(), row))
-            self._search_index.append(("subject", subject, subject, lambda value=subject: self.configure(value)))
+            self._search_index.append(
+                ("subject", subject, subject, lambda value=subject: self.configure(value))
+            )
         for question in self.public_questions:
             self._search_index.append(
                 (
@@ -1773,12 +1953,15 @@ class Application:
         if self.user and self.user["role"] == "admin":
             admin = ttk.Frame(feed, style="App.TFrame")
             admin.pack(fill="x", pady=(8, 0))
-            ttk.Button(admin, text=self.tr("题库管理 / 上传图片"), command=self.manage_questions, style="Tool.TButton").pack(
-                side="left", padx=(0, 8)
-            )
-            ttk.Button(admin, text=self.tr("用户管理"), command=self.manage_users, style="Tool.TButton").pack(
-                side="left"
-            )
+            ttk.Button(
+                admin,
+                text=self.tr("题库管理 / 上传图片"),
+                command=self.manage_questions,
+                style="Tool.TButton",
+            ).pack(side="left", padx=(0, 8))
+            ttk.Button(
+                admin, text=self.tr("用户管理"), command=self.manage_users, style="Tool.TButton"
+            ).pack(side="left")
         if self.bank.warnings:
             self.label(
                 self.tr("题库提示（其他有效题目仍可使用）：\n") + "\n".join(self.bank.warnings),
@@ -1804,7 +1987,13 @@ class Application:
 
         name = self.user["name"] if self.user else self.tr("访客")
         hour = datetime.now().hour
-        greeting = self.tr("早上好") if hour < 12 else self.tr("下午好") if hour < 18 else self.tr("晚上好")
+        greeting = (
+            self.tr("早上好")
+            if hour < 12
+            else self.tr("下午好")
+            if hour < 18
+            else self.tr("晚上好")
+        )
         tk.Label(
             self.body,
             text=f"{greeting}，{name}",
@@ -1813,10 +2002,9 @@ class Application:
             font=(FONT, 24, "bold"),
         ).pack(anchor="w", pady=(0, 16))
 
-        wrong, history, data_error = {}, [], ""
+        history, data_error = [], ""
         try:
             progress = self.progress.load()
-            wrong = progress.get("wrong") or {}
             history = progress.get("history") or []
         except DataError as exc:
             data_error = str(exc)
@@ -1867,9 +2055,7 @@ class Application:
             fg=TEXT,
             font=TYPE_BODY,
         ).pack(anchor="w", pady=(0, 8))
-        progress_canvas = tk.Canvas(
-            goal, height=18, bg=SURFACE, highlightthickness=0, bd=0
-        )
+        progress_canvas = tk.Canvas(goal, height=18, bg=SURFACE, highlightthickness=0, bd=0)
         progress_canvas.pack(fill="x", pady=(0, 20))
 
         def draw_goal_bar(_event=None):
@@ -2025,10 +2211,12 @@ class Application:
         if self.user and self.user["role"] == "admin":
             admin = tk.Frame(self.body, bg=BG)
             admin.pack(fill="x", pady=(12, 0))
-            self._mock_action(admin, self.tr("题库管理 / 上传图片"), self.manage_questions, False).pack(
-                side="left", padx=(0, 8)
+            self._mock_action(
+                admin, self.tr("题库管理 / 上传图片"), self.manage_questions, False
+            ).pack(side="left", padx=(0, 8))
+            self._mock_action(admin, self.tr("用户管理"), self.manage_users, False).pack(
+                side="left"
             )
-            self._mock_action(admin, self.tr("用户管理"), self.manage_users, False).pack(side="left")
 
     def set_daily_goal(self):
         try:
@@ -2109,9 +2297,7 @@ class Application:
                 font=(FONT, 10, "bold"),
             )
             title_label.pack(anchor="w", pady=(5, 1))
-            tk.Label(
-                step, text=hint, bg=HOVER, fg=MUTED, font=(FONT, 8)
-            ).pack(anchor="w")
+            tk.Label(step, text=hint, bg=HOVER, fg=MUTED, font=(FONT, 8)).pack(anchor="w")
             self.import_steps.append((badge, title_label))
 
         upload_zone = tk.Frame(
@@ -2163,9 +2349,7 @@ class Application:
         )
         self.import_summary.pack(anchor="w", pady=(0, 8))
         columns = ("row", "id", "status", "message")
-        self.import_table = ttk.Treeview(
-            self.body, columns=columns, show="headings", height=12
-        )
+        self.import_table = ttk.Treeview(self.body, columns=columns, show="headings", height=12)
         for key, title, width in (
             ("row", "#", 55),
             ("id", self.tr("题目 ID"), 130),
@@ -2289,16 +2473,12 @@ class Application:
             card = card_frame(stats, pad=14)
             card.pack(side="left", fill="x", expand=True, padx=(0, 10))
             tk.Label(card, text=title, bg=SURFACE, fg=color, font=TYPE_HINT).pack(anchor="w")
-            value = tk.Label(
-                card, text="0", bg=SURFACE, fg=color, font=(FONT, 22, "bold")
-            )
+            value = tk.Label(card, text="0", bg=SURFACE, fg=color, font=(FONT, 22, "bold"))
             value.pack(anchor="w", pady=(4, 0))
             self.import_stat_labels[key] = value
 
         columns = ("status", "id", "subject", "topic", "difficulty", "question")
-        self.import_table = ttk.Treeview(
-            self.body, columns=columns, show="headings", height=9
-        )
+        self.import_table = ttk.Treeview(self.body, columns=columns, show="headings", height=9)
         for key, title, width in (
             ("status", self.tr("状态"), 95),
             ("id", "ID", 90),
@@ -2386,9 +2566,7 @@ class Application:
         if not path:
             return
         try:
-            preview = QuestionImportService(
-                self.personal_bank, self.public_questions
-            ).preview(path)
+            preview = QuestionImportService(self.personal_bank, self.public_questions).preview(path)
         except (DataError, ValueError) as exc:
             messagebox.showerror(self.tr("导入文件无效"), self.tr(str(exc)), parent=self.root)
             return
@@ -2426,9 +2604,7 @@ class Application:
             label = getattr(self, "import_stat_labels", {}).get(key)
             if label:
                 label.configure(text=str(value))
-        self.import_summary.configure(
-            text=self.tr("ⓘ 错误记录不会导入题库，可下载校验报告")
-        )
+        self.import_summary.configure(text=self.tr("ⓘ 错误记录不会导入题库，可下载校验报告"))
         self.import_confirm.configure(
             text=self.tr("合并 {0} 道有效题目", len(preview.valid)),
             bg=PRIMARY if preview.valid else PRIMARY_DISABLED,
@@ -2445,9 +2621,9 @@ class Application:
         ):
             return
         try:
-            added = QuestionImportService(
-                self.personal_bank, self.public_questions
-            ).confirm(preview)
+            added = QuestionImportService(self.personal_bank, self.public_questions).confirm(
+                preview
+            )
         except (DataError, ValueError) as exc:
             messagebox.showerror(self.tr("导入失败"), self.tr(str(exc)), parent=self.root)
             return
@@ -2482,12 +2658,16 @@ class Application:
             return
         hits = [item for item in getattr(self, "_search_index", []) if query in item[1]][:8]
         if not hits:
-            tk.Label(host, text=self.tr("没有匹配结果"), bg=BG, fg=MUTED, font=TYPE_HINT).pack(anchor="w")
+            tk.Label(host, text=self.tr("没有匹配结果"), bg=BG, fg=MUTED, font=TYPE_HINT).pack(
+                anchor="w"
+            )
             return
         for kind, _hay, label, action in hits:
-            tag = {"subject": self.tr("科目"), "question": self.tr("题目"), "wrong": self.tr("错题")}.get(
-                kind, kind
-            )
+            tag = {
+                "subject": self.tr("科目"),
+                "question": self.tr("题目"),
+                "wrong": self.tr("错题"),
+            }.get(kind, kind)
             line = tk.Button(
                 host,
                 text=f"{tag} · {label[:48]}",
@@ -2533,7 +2713,7 @@ class Application:
             self.personal_questions if bank_kind == "personal" else self.public_questions
         )
         self._practice_bank_kind = bank_kind
-        self.clear(self.tr("配置练习"))
+        self.clear(self.tr("配置练习"), show_heading=False)
         if not self.questions:
             self.label(
                 self.tr(
@@ -2554,32 +2734,32 @@ class Application:
         self.difficulty = tk.StringVar(value=self.tr("全部"))
         self.count = tk.StringVar(value="5")
         self.label(self.tr("整轮限时（秒，0 表示不限时）"))
-        ttk.Spinbox(self.body, from_=0, to=86400, textvariable=self.timer_seconds, width=12).pack(anchor="w")
-        card = ttk.LabelFrame(self.body, text=self.tr("练习设置"), padding=16)
+        ttk.Spinbox(self.body, from_=0, to=86400, textvariable=self.timer_seconds, width=12).pack(
+            anchor="w"
+        )
+        card = ttk.LabelFrame(self.body, text=self.tr("练习设置"), padding=10)
         card.pack(fill="x", pady=8)
         ttk.Label(card, text=self.tr("学科"), style="Card.TLabel").pack(anchor="w", pady=(0, 8))
+        self._subject_cards = []
         picker = ttk.Frame(card, style="Card.TFrame")
         picker.pack(fill="x")
-        self._subject_cards = []
-        counts = {}
-        for question in self.questions:
-            counts[question.subject] = counts.get(question.subject, 0) + 1
-        for name in subjects:
-            item = card_frame(picker, pad=12)
-            item.pack(side="left", expand=True, fill="x", padx=(0, 8))
-            subject_icon(item, name).pack(anchor="w")
-            ttk.Label(item, text=name, style="Stat.TLabel").pack(anchor="w", pady=(8, 0))
-            ttk.Label(
-                item, text=self.tr("{0} 道题", counts.get(name, 0)), style="StatHint.TLabel"
-            ).pack(anchor="w")
+        counts = {name: sum(q.subject == name for q in self.questions) for name in subjects}
+        for index, name in enumerate(subjects):
+            item = card_frame(picker, pad=6)
+            item.grid(row=index // 3, column=index % 3, sticky="nsew", padx=(0, 6), pady=3)
+            picker.columnconfigure(index % 3, weight=1, uniform="subjects")
+            ttk.Label(item, text=name, style="Card.TLabel").pack(anchor="w")
+            ttk.Label(item, text=self.tr("{0} 道题", counts[name]), style="StatHint.TLabel").pack(
+                anchor="w"
+            )
             self._subject_cards.append((item, name))
             bind_whole(item, lambda value=name: self._select_subject(value))
         filters = ttk.Frame(card, style="Card.TFrame")
-        filters.pack(fill="x", pady=(16, 0))
+        filters.pack(fill="x", pady=(8, 0))
         ttk.Label(filters, text=self.tr("主题"), style="Card.TLabel").pack(anchor="w", pady=(0, 4))
         self.topic_box = ttk.Combobox(filters, textvariable=self.topic, state="readonly")
         self.topic_box.pack(fill="x")
-        ttk.Label(filters, text=self.tr("难度"), style="Card.TLabel").pack(anchor="w", pady=(12, 4))
+        ttk.Label(filters, text=self.tr("难度"), style="Card.TLabel").pack(anchor="w", pady=(6, 4))
         self.difficulty_box = ttk.Combobox(filters, textvariable=self.difficulty, state="readonly")
         # Keep combobox for filter values; chips are the visible control.
         self.difficulty_chips = ttk.Frame(filters, style="Card.TFrame")
@@ -2588,30 +2768,37 @@ class Application:
             card,
             text=self.tr("题目数量（不足时使用所有匹配题目；顺序随机）"),
             style="Card.TLabel",
-        ).pack(anchor="w", pady=(12, 4))
+        ).pack(anchor="w", pady=(6, 4))
         stepper = ttk.Frame(card, style="Card.TFrame")
         stepper.pack(fill="x")
-        ttk.Button(stepper, text="−", width=3, command=lambda: self._nudge_count(-1)).pack(side="left")
+        ttk.Button(stepper, text="−", width=3, command=lambda: self._nudge_count(-1)).pack(
+            side="left"
+        )
         self.count_box = ttk.Spinbox(stepper, from_=1, to=20, textvariable=self.count, width=8)
         self.count_box.pack(side="left", padx=8)
-        ttk.Button(stepper, text="+", width=3, command=lambda: self._nudge_count(1)).pack(side="left")
+        ttk.Button(stepper, text="+", width=3, command=lambda: self._nudge_count(1)).pack(
+            side="left"
+        )
         self.count_box.bind("<KeyRelease>", self.show_count)
-        self.count_box.bind("<<Increment>>", self.show_count)
-        self.count_box.bind("<<Decrement>>", self.show_count)
+        self.count.trace_add("write", lambda *_: self._sync_start_button())
         self._match_count = 0
         self.available = ttk.Label(card, text="", style="Card.TLabel")
         self.available.pack(anchor="w", pady=(10, 4))
         self.config_summary = ttk.Label(card, text="", style="Muted.TLabel")
-        self.config_summary.pack(anchor="w", pady=(0, 10))
+        # Summary is retained for filter updates; the controls already show these values.
         self.topic_box.bind("<<ComboboxSelected>>", self.refresh_difficulties)
         self.refresh_filters()
         self._paint_subject_cards()
+        dock = self._action_dock()
         self.start_button = ttk.Button(
-            self.body, text=self.tr("开始练习"), command=self.start_configured, style="Accent.TButton"
+            dock,
+            text=self.tr("开始练习"),
+            command=self.start_configured,
+            style="Accent.TButton",
         )
-        self.start_button.pack(anchor="w", pady=4)
-        ttk.Button(self.body, text=self.tr("返回首页"), command=self.home, style="Tool.TButton").pack(
-            anchor="w", pady=4
+        self.start_button.pack(side="left", padx=8)
+        ttk.Button(dock, text=self.tr("返回首页"), command=self.home, style="Tool.TButton").pack(
+            side="right", padx=8
         )
         self._sync_start_button()
 
@@ -2736,7 +2923,10 @@ class Application:
         )
         previous = getattr(self, "_match_count", count)
         self._match_count = count
-        formatter = lambda value: self.tr("当前匹配：{0} 道题", value)
+
+        def formatter(value):
+            return self.tr("当前匹配：{0} 道题", value)
+
         if getattr(self, "available", None) and self.available.winfo_exists():
             self.motion.roll_count(self.available, formatter, previous, count)
         box = getattr(self, "count_box", None)
@@ -2767,9 +2957,7 @@ class Application:
             count = int(self.count.get())
             subject = self.subject.get()
             topic = None if self.topic.get() == self.tr("全部") else self.topic.get()
-            difficulty = (
-                None if self.difficulty.get() == self.tr("全部") else self.difficulty.get()
-            )
+            difficulty = None if self.difficulty.get() == self.tr("全部") else self.difficulty.get()
             questions = select_questions(self.questions, subject, topic, difficulty, count)
             self._last_filters = {
                 "subject": subject,
@@ -2843,12 +3031,17 @@ class Application:
     def export_progress(self, kind, format):
         if not self.check_session():
             return
-        path = filedialog.asksaveasfilename(parent=self.root, defaultextension="." + format,
-            filetypes=[(format.upper(), "*." + format)], initialfile=kind + "." + format)
+        path = filedialog.asksaveasfilename(
+            parent=self.root,
+            defaultextension="." + format,
+            filetypes=[(format.upper(), "*." + format)],
+            initialfile=kind + "." + format,
+        )
         if not path:
             return
         try:
             from .exports import export_progress
+
             export_progress(Path(path), kind, format, self.progress.load(), self.by_id)
         except (ValueError, OSError, ImportError) as exc:
             messagebox.showerror(self.tr("导出失败"), str(exc), parent=self.root)
@@ -2859,8 +3052,11 @@ class Application:
         bar = ttk.Frame(self.body)
         bar.pack(fill="x", pady=6)
         for format in ("csv", "pdf"):
-            ttk.Button(bar, text=self.tr("导出 {0}", format.upper()),
-                command=lambda f=format: self.export_progress(kind, f)).pack(side="left", padx=4)
+            ttk.Button(
+                bar,
+                text=self.tr("导出 {0}", format.upper()),
+                command=lambda f=format: self.export_progress(kind, f),
+            ).pack(side="left", padx=4)
 
     def show_image(self, value, parent=None, fallback_subject=None):
         host = parent or self.body
@@ -2941,21 +3137,32 @@ class Application:
                     width=3,
                 )
                 mark.pack(side="left")
-                widget = ttk.Radiobutton(inner, text=text, variable=self.answer, value=option)
+                widget = ttk.Radiobutton(
+                    inner,
+                    text=option,
+                    variable=self.answer,
+                    value=option,
+                    style="CardOption.TRadiobutton",
+                )
                 widget.pack(side="left", fill="x", expand=True, padx=8)
                 status = tk.Label(inner, text="", bg=SURFACE, fg=MUTED, font=TYPE_HINT, width=6)
                 status.pack(side="right")
                 self.option_status[option] = status
                 self.option_buttons.append(widget)
                 self.option_cards.append((card, option))
-                pick = lambda value=option: self._pick_option(value)
+
+                def pick(value=option):
+                    self._pick_option(value)
+
                 bind_whole(card, pick)
                 card.bind("<Enter>", lambda _e, frame=card: self._hover_option(frame, True))
                 card.bind("<Leave>", lambda _e, frame=card: self._hover_option(frame, False))
                 widget.bind("<Enter>", lambda _e, frame=card: self._hover_option(frame, True))
                 widget.bind("<Leave>", lambda _e, frame=card: self._hover_option(frame, False))
             else:
-                ttk.Label(box, text=text, wraplength=600, style="Card.TLabel").pack(anchor="w", pady=2)
+                ttk.Label(box, text=text, wraplength=600, style="Card.TLabel").pack(
+                    anchor="w", pady=2
+                )
             if q.option_images:
                 self.show_image(q.option_images[index], box if not selectable else card)
 
@@ -3009,7 +3216,9 @@ class Application:
                 border = BORDER
             self._fill_option(frame, color, border)
             if status is not None and status.winfo_exists():
-                status.configure(text=note, bg=color, fg=SUCCESS_FG if note == self.tr("正确") else TEXT)
+                status.configure(
+                    text=note, bg=color, fg=SUCCESS_FG if note == self.tr("正确") else TEXT
+                )
 
     def show_question(self):
         engine = self.engine
@@ -3017,40 +3226,39 @@ class Application:
         total = len(engine.questions)
         self._choices_locked = False
         self._submit_busy = False
-        self.clear(self.tr("{0} · 第 {1} / {2} 题", mode, engine.index + 1, total))
-        ttk.Label(
-            self.body,
-            text=self.tr("进度：第 {0} / {1} 题", engine.index + 1, total),
-            style="Muted.TLabel",
-        ).pack(fill="x")
-        path = tk.Canvas(self.body, height=28, bg=BG, highlightthickness=0, bd=0)
+        self.clear(
+            self.tr("{0} · 第 {1} / {2} 题", mode, engine.index + 1, total), show_heading=False
+        )
+        self.quiz_progress_header = ttk.Frame(self.outer, style="App.TFrame", padding=(24, 4))
+        self.quiz_progress_header.pack(side="top", fill="x", before=self.canvas)
+        path = tk.Canvas(self.quiz_progress_header, height=28, bg=BG, highlightthickness=0, bd=0)
         path.pack(fill="x", pady=(2, 4))
         path.bind(
             "<Configure>",
-            lambda _e, canvas=path, n=total, i=engine.index + 1: self.motion.paint_path(canvas, n, i),
+            lambda _e, canvas=path, n=total, i=engine.index + 1: self.motion.paint_path(
+                canvas, n, i
+            ),
         )
-        bar = ttk.Progressbar(self.body, maximum=total, value=engine.index)
-        bar.pack(fill="x", pady=(4, 16))
-        self.motion.grow_progress(bar, engine.index + 1)
         self.answer = tk.StringVar(value="")
         self.question_shell = ttk.Frame(self.body, style="App.TFrame")
         self.question_shell.pack(fill="x")
         self.question_content(engine.current, selectable=True, parent=self.question_shell)
         self.answer.trace_add("write", lambda *_: self._on_answer_changed())
-        self.submit_button = self.button(self.tr("检查答案"), self.submit, "Accent.TButton")
-        self.submit_button.state(["disabled"])
         self.feedback = self.label("")
+        dock = self._action_dock()
+        self.submit_button = ttk.Button(
+            dock, text=self.tr("检查答案"), command=self.submit, style="Accent.TButton"
+        )
+        self.submit_button.pack(side="left", padx=8)
+        self.submit_button.state(["disabled"])
         next_label = self.tr("查看结果") if engine.index == total - 1 else self.tr("继续")
-        self.next_button = self.button(next_label, self.advance)
+        self.next_button = ttk.Button(
+            dock, text=next_label, command=self.advance, style="Accent.TButton"
+        )
         self.next_button.state(["disabled"])
         ttk.Button(
-            self.body, text=self.tr("结束练习并返回"), command=self.leave_quiz, style="Tool.TButton"
-        ).pack(anchor="w", pady=4)
-        ttk.Label(
-            self.body,
-            text=self.tr("快捷键：1–4 或 A–D 选择答案，Enter 检查或继续"),
-            style="Muted.TLabel",
-        ).pack(anchor="w", pady=(8, 0))
+            dock, text=self.tr("结束练习并返回"), command=self.leave_quiz, style="Tool.TButton"
+        ).pack(side="right")
         self._bind_quiz_keys()
         self.motion.fade_in(self.question_shell, duration=160)
 
@@ -3142,12 +3350,12 @@ class Application:
         self._paint_options(submitted=True, correct=correct)
         q = self.engine.current
         headline = self.tr("回答正确") if correct else self.tr("再想一想")
-        detail = (
-            self.tr("回答正确，继续保持。") if correct else self.tr("回答错误，已记入错题本。")
-        )
+        detail = self.tr("回答正确，继续保持。") if correct else self.tr("回答错误，已记入错题本。")
         self.feedback.configure(
             style="Success.TLabel" if correct else "Error.TLabel",
-            text=self.tr("{0}\n正确答案：{1}\n解析：{2}", f"{headline}\n{detail}", q.answer, q.explanation),
+            text=self.tr(
+                "{0}\n正确答案：{1}\n解析：{2}", f"{headline}\n{detail}", q.answer, q.explanation
+            ),
         )
         next_label = (
             self.tr("查看结果")
@@ -3159,7 +3367,9 @@ class Application:
             if not self.submit_button.winfo_exists():
                 return
             # Keep submit disabled so a second invoke cannot rescore or skip ahead.
-            self.submit_button.configure(text=next_label)
+            self.submit_button.pack_forget()
+            self.next_button.configure(text=next_label)
+            self.next_button.pack(side="left", padx=8)
             self.submit_button.state(["disabled"])
             self.next_button.state(["!disabled"])
             self._submit_busy = False
@@ -3186,7 +3396,12 @@ class Application:
         self.timer_label.configure(text="")
         self.clear(self.tr("练习完成"), show_heading=True)
         if getattr(self.engine, "timed_out", False):
-            self.label(self.tr("本轮已超时，未答 {0} 题计为未得分；未答题不会加入错题本。", self.engine.unanswered))
+            self.label(
+                self.tr(
+                    "本轮已超时，未答 {0} 题计为未得分；未答题不会加入错题本。",
+                    self.engine.unanswered,
+                )
+            )
         stats = ttk.Frame(self.body, style="App.TFrame")
         stats.pack(fill="x", pady=(4, 12))
         for title, value in (
@@ -3197,7 +3412,9 @@ class Application:
             cell = card_frame(stats, pad=14)
             cell.pack(side="left", fill="x", expand=True, padx=(0, 10))
             tk.Label(cell, text=title, bg=SURFACE, fg=MUTED, font=TYPE_HINT).pack(anchor="w")
-            tk.Label(cell, text=value, bg=SURFACE, fg=TEXT, font=(FONT, 20, "bold")).pack(anchor="w", pady=(4, 0))
+            tk.Label(cell, text=value, bg=SURFACE, fg=TEXT, font=(FONT, 20, "bold")).pack(
+                anchor="w", pady=(4, 0)
+            )
         accuracy = result["accuracy"]
         if accuracy >= 80:
             advice = self.tr("本轮正确率较高，可以尝试更多题目或更高难度。")
@@ -3212,18 +3429,18 @@ class Application:
         self.engine = None
         actions = ttk.Frame(self.body, style="App.TFrame")
         actions.pack(fill="x", pady=12)
-        ttk.Button(actions, text=self.tr("再练一次"), command=self.retry_quiz, style="Accent.TButton").pack(
-            side="left", padx=(0, 8)
-        )
-        ttk.Button(actions, text=self.tr("查看错题本"), command=self.notebook, style="Accent.TButton").pack(
-            side="left", padx=(0, 8)
-        )
+        ttk.Button(
+            actions, text=self.tr("再练一次"), command=self.retry_quiz, style="Accent.TButton"
+        ).pack(side="left", padx=(0, 8))
+        ttk.Button(
+            actions, text=self.tr("查看错题本"), command=self.notebook, style="Accent.TButton"
+        ).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text=self.tr("返回首页"), command=self.home, style="Tool.TButton").pack(
             side="left", padx=(0, 8)
         )
-        ttk.Button(actions, text=self.tr("查看学习历史"), command=self.history, style="Tool.TButton").pack(
-            side="left"
-        )
+        ttk.Button(
+            actions, text=self.tr("查看学习历史"), command=self.history, style="Tool.TButton"
+        ).pack(side="left")
 
     def retry_quiz(self):
         if not self.check_session():
@@ -3277,7 +3494,9 @@ class Application:
         if self.engine and not self.engine.complete:
             return messagebox.askyesno(
                 self.tr("结束练习？"),
-                self.tr("本次练习尚未完成，退出后不会计入成绩历史。已经提交且答错的题目会保留在错题本，供以后复习。确定退出吗？"),
+                self.tr(
+                    "本次练习尚未完成，退出后不会计入成绩历史。已经提交且答错的题目会保留在错题本，供以后复习。确定退出吗？"
+                ),
                 parent=self.root,
             )
         return True
@@ -3298,22 +3517,30 @@ class Application:
         except DataError as exc:
             empty = card_frame(self.body, pad=16)
             empty.pack(fill="x")
-            tk.Label(empty, text=self.tr("学习数据加载失败"), bg=SURFACE, fg=TEXT, font=(FONT, 13, "bold")).pack(
-                anchor="w"
-            )
-            tk.Label(empty, text=self.tr(str(exc)), bg=SURFACE, fg=MUTED, wraplength=560, justify="left").pack(
-                anchor="w", pady=8
-            )
-            ttk.Button(empty, text=self.tr("重新加载题库"), command=self.notebook, style="Accent.TButton").pack(
-                anchor="w"
-            )
+            tk.Label(
+                empty,
+                text=self.tr("学习数据加载失败"),
+                bg=SURFACE,
+                fg=TEXT,
+                font=(FONT, 13, "bold"),
+            ).pack(anchor="w")
+            tk.Label(
+                empty, text=self.tr(str(exc)), bg=SURFACE, fg=MUTED, wraplength=560, justify="left"
+            ).pack(anchor="w", pady=8)
+            ttk.Button(
+                empty, text=self.tr("重新加载题库"), command=self.notebook, style="Accent.TButton"
+            ).pack(anchor="w")
             return
         if not wrong:
             empty = card_frame(self.body, pad=16)
             empty.pack(fill="x")
-            tk.Label(empty, text=self.tr("还没有错题。开始一次练习吧！"), bg=SURFACE, fg=TEXT, font=(FONT, 13, "bold")).pack(
-                anchor="w"
-            )
+            tk.Label(
+                empty,
+                text=self.tr("还没有错题。开始一次练习吧！"),
+                bg=SURFACE,
+                fg=TEXT,
+                font=(FONT, 13, "bold"),
+            ).pack(anchor="w")
             tk.Label(
                 empty,
                 text=self.tr("完成第一次练习后，学习动态会显示在这里。"),
@@ -3322,12 +3549,18 @@ class Application:
                 wraplength=560,
                 justify="left",
             ).pack(anchor="w", pady=8)
-            ttk.Button(empty, text=self.tr("开始第一次练习"), command=self.configure, style="Accent.TButton").pack(
-                anchor="w"
-            )
+            ttk.Button(
+                empty,
+                text=self.tr("开始第一次练习"),
+                command=self.configure,
+                style="Accent.TButton",
+            ).pack(anchor="w")
             return
         available = [self.by_id[key] for key in wrong if key in self.by_id]
-        self.label(self.tr("复习规则：复习答对后移除；普通练习答对不会移除。重复答错累计次数。"), "Muted.TLabel")
+        self.label(
+            self.tr("复习规则：复习答对后移除；普通练习答对不会移除。重复答错累计次数。"),
+            "Muted.TLabel",
+        )
         actions = ttk.Frame(self.body, style="App.TFrame")
         actions.pack(fill="x", pady=(0, 8))
         if available:
@@ -3337,7 +3570,9 @@ class Application:
                 command=lambda: self.start_quiz(available, True),
                 style="Accent.TButton",
             ).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text=self.tr("返回首页"), command=self.home, style="Tool.TButton").pack(side="left")
+        ttk.Button(actions, text=self.tr("返回首页"), command=self.home, style="Tool.TButton").pack(
+            side="left"
+        )
         for key, record in wrong.items():
             panel = card_frame(self.body, pad=14)
             panel.pack(fill="x", pady=(0, 10))
@@ -3395,7 +3630,9 @@ class Application:
 
             row = tk.Frame(panel, bg=SURFACE)
             row.pack(anchor="w")
-            self._text_button(row, self.tr("查看解析"), toggle_explain, bg=SURFACE).pack(side="left", padx=(0, 12))
+            self._text_button(row, self.tr("查看解析"), toggle_explain, bg=SURFACE).pack(
+                side="left", padx=(0, 12)
+            )
             ttk.Button(
                 row,
                 text=self.tr("重新练习"),
@@ -3435,9 +3672,9 @@ class Application:
         if not history:
             empty = card_frame(self.body, pad=16)
             empty.pack(fill="x", pady=(0, 8))
-            tk.Label(empty, text=self.tr("还没有学习记录"), bg=SURFACE, fg=TEXT, font=(FONT, 13, "bold")).pack(
-                anchor="w"
-            )
+            tk.Label(
+                empty, text=self.tr("还没有学习记录"), bg=SURFACE, fg=TEXT, font=(FONT, 13, "bold")
+            ).pack(anchor="w")
             tk.Label(
                 empty,
                 text=self.tr("完成第一次练习后，学习动态会显示在这里。"),
@@ -3446,9 +3683,12 @@ class Application:
                 wraplength=560,
                 justify="left",
             ).pack(anchor="w", pady=8)
-            ttk.Button(empty, text=self.tr("开始第一次练习"), command=self.configure, style="Accent.TButton").pack(
-                anchor="w"
-            )
+            ttk.Button(
+                empty,
+                text=self.tr("开始第一次练习"),
+                command=self.configure,
+                style="Accent.TButton",
+            ).pack(anchor="w")
         for record in reversed(history):
             card = ttk.LabelFrame(self.body, text=record["date"], padding=12)
             card.pack(fill="x", pady=8)

@@ -307,7 +307,7 @@ class RoleGuiTests(unittest.TestCase):
         self.assertEqual(self.app.topic.get(), "All")
         q = self.app.questions[0]
         self.app.start_quiz([q])
-        self.assertEqual(self.app.option_buttons[0].cget("text"), f"A: {q.options[0]}")
+        self.assertEqual(self.app.option_buttons[0].cget("text"), q.options[0])
         self.app.answer.set(next(o for o in q.options if o != q.answer))
         self.app.submit()
         self.assertIn("Correct answer:", self.app.feedback.cget("text"))

@@ -24,11 +24,11 @@ class DisplaySettings:
             raise DataError("Invalid display.json settings")
         return data
 
-    def save(self, size, compact):
+    def save(self, size, compact, wheel_controls=False):
         if size not in SIZES or type(compact) is not bool:
             raise ValueError("Invalid display settings")
         self.load()  # Preserve a corrupt file for diagnosis instead of overwriting it.
-        self.store.write({"size": size, "compact": compact})
+        self.store.write({"size": size, "compact": compact, "wheel_controls": bool(wheel_controls)})
 
 
 def window_size(size, screen_width, screen_height):

@@ -175,7 +175,7 @@
   "本周学习进度": "This week's progress",
   "展示示例，登录后以你的真实记录为准": "Sample preview. Your real records appear after you sign in.",
   "示例进度，登录后查看你的真实记录": "Sample progress. Sign in to see your real records.",
-  "连续学习天数": "Day streak",
+  "连续学习天数": "Study streak",
   "完成练习": "Quizzes done",
   "本周 XP": "XP this week",
   "还没有账户？": "New here?",
@@ -307,7 +307,6 @@
   "每日学习计划": "Daily learning plan",
   "今日进度": "Today's progress",
   "还差题数": "Questions remaining",
-  "连续学习天数": "Study streak",
   "最近 7 天": "Last 7 days",
   "今日 {0} / {1} 题 · 还差 {2} 题 · 连续学习 {3} 天": "Today {0} / {1} · {2} remaining · {3}-day streak",
   "最近 7 天：{0}": "Last 7 days: {0}",
@@ -346,38 +345,39 @@
   "返回我的题库": "Back to my question bank",
   "个人题库为空，请先导入 JSON 或 CSV 文件。": "Your personal bank is empty. Import a JSON or CSV file first.",
   "学习计划未更新": "Learning plan not updated",
-  "答案和成绩已保存，但每日进度保存失败：{0}": "The answer and score were saved, but daily progress could not be updated: {0}"
-  ,"导入题库": "Import question bank"
-  ,"早上好": "Good morning"
-  ,"下午好": "Good afternoon"
-  ,"晚上好": "Good evening"
-  ,"今日目标": "Today's goal"
-  ,"题": "questions"
-  ,"已完成 {0}%": "{0}% complete"
-  ,"继续今日练习": "Continue today's practice"
-  ,"连续学习": "Study streak"
-  ,"{0} 天": "{0} days"
-  ,"一 二 三 四 五 六 日": "M T W T F S S"
-  ,"题 / 天": "questions / day"
-  ,"设置每日目标": "Set daily goal"
-  ,"调整": "Change"
-  ,"最近学习": "Recent study"
-  ,"{0} 题": "{0} questions"
-  ,"还没有学习记录，完成第一次练习后会显示在这里。": "No study records yet. Your first completed practice will appear here."
-  ,"选择文件": "Choose file"
-  ,"数据校验": "Validate data"
-  ,"预览确认": "Preview"
-  ,"合并完成": "Complete"
-  ,"▤  选择 JSON / CSV 文件": "▤  Choose JSON / CSV file"
-  ,"点击选择文件": "Click to choose a file"
-  ,"警告": "Warnings"
-  ,"共 {0} 条": "{0} records"
-  ,"导入后权限": "Access after import"
-  ,"仅自己可用": "Only me"
-  ,"共享给本机所有账户（需管理员批准）": "Share with all local users (admin approval required)"
-  ,"ⓘ 错误记录不会导入题库": "ⓘ Invalid records will not be imported"
-  ,"ⓘ 错误记录不会导入题库，可下载校验报告": "ⓘ Invalid records will not be imported; validation report available"
-  ,"合并 0 道有效题目": "Merge 0 valid questions"
-  ,"合并 {0} 道有效题目": "Merge {0} valid questions"
-  ,"返回修改": "Back to edit"
+  "答案和成绩已保存，但每日进度保存失败：{0}": "The answer and score were saved, but daily progress could not be updated: {0}",
+  "导入题库": "Import question bank",
+  "早上好": "Good morning",
+  "下午好": "Good afternoon",
+  "晚上好": "Good evening",
+  "今日目标": "Today's goal",
+  "题": "questions",
+  "已完成 {0}%": "{0}% complete",
+  "继续今日练习": "Continue today's practice",
+  "连续学习": "Study streak",
+  "{0} 天": "{0} days",
+  "一 二 三 四 五 六 日": "M T W T F S S",
+  "题 / 天": "questions / day",
+  "设置每日目标": "Set daily goal",
+  "调整": "Change",
+  "最近学习": "Recent study",
+  "{0} 题": "{0} questions",
+  "还没有学习记录，完成第一次练习后会显示在这里。": "No study records yet. Your first completed practice will appear here.",
+  "选择文件": "Choose file",
+  "数据校验": "Validate data",
+  "预览确认": "Preview",
+  "合并完成": "Complete",
+  "▤  选择 JSON / CSV 文件": "▤  Choose JSON / CSV file",
+  "点击选择文件": "Click to choose a file",
+  "警告": "Warnings",
+  "共 {0} 条": "{0} records",
+  "导入后权限": "Access after import",
+  "仅自己可用": "Only me",
+  "共享给本机所有账户（需管理员批准）": "Share with all local users (admin approval required)",
+  "ⓘ 错误记录不会导入题库": "ⓘ Invalid records will not be imported",
+  "ⓘ 错误记录不会导入题库，可下载校验报告": "ⓘ Invalid records will not be imported; validation report available",
+  "合并 0 道有效题目": "Merge 0 valid questions",
+  "合并 {0} 道有效题目": "Merge {0} valid questions",
+  "返回修改": "Back to edit",
+  "允许滚轮更改下拉选项和题数": "Allow mouse wheel to change dropdowns and counts"
 }

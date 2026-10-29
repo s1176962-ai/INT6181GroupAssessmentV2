@@ -144,7 +144,9 @@ class Motion:
         self._overlay = canvas
         dots = []
         for dx, dy in ((-20, 20), (-6, 8), (8, 6), (22, 18), (0, 28)):
-            dots.append(canvas.create_oval(60 + dx, dy, 60 + dx + 6, dy + 6, fill=color, outline=""))
+            dots.append(
+                canvas.create_oval(60 + dx, dy, 60 + dx + 6, dy + 6, fill=color, outline="")
+            )
 
         def tick(n=0):
             if not canvas.winfo_exists():
@@ -220,5 +222,20 @@ class Motion:
             color = PRIMARY if filled else "#D8D2C6"
             if index < total - 1:
                 x2 = pad + span * (index + 1) / max(total - 1, 1)
-                canvas.create_line(x + 7, y, x2 - 7, y, fill=PRIMARY if index < current - (0 if done else 1) else "#D8D2C6", width=3)
-            canvas.create_oval(x - 7, y - 7, x + 7, y + 7, fill=SURFACE if not filled else PRIMARY, outline=color, width=2)
+                canvas.create_line(
+                    x + 7,
+                    y,
+                    x2 - 7,
+                    y,
+                    fill=PRIMARY if index < current - (0 if done else 1) else "#D8D2C6",
+                    width=3,
+                )
+            canvas.create_oval(
+                x - 7,
+                y - 7,
+                x + 7,
+                y + 7,
+                fill=SURFACE if not filled else PRIMARY,
+                outline=color,
+                width=2,
+            )

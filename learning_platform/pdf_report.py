@@ -27,6 +27,7 @@ def build_report(kind, data, bank):
     local_font = Path("C:/Windows/Fonts/simsun.ttc")
     if local_font.exists():
         from reportlab.pdfbase.ttfonts import TTFont
+
         pdfmetrics.registerFont(TTFont("ReportChinese", str(local_font), subfontIndex=0))
         font = "ReportChinese"
     body = ParagraphStyle(
@@ -118,6 +119,7 @@ def build_report(kind, data, bank):
         for i, (qid, r) in enumerate(data["wrong"].items(), 1):
             if i > 1:
                 from reportlab.platypus import PageBreak
+
                 story.append(PageBreak())
             q = bank.get(qid)
             story.append(para(f"{i:02}  {qid} · 错误次数 {r['count']}", heading))

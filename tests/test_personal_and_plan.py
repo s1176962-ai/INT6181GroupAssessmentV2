@@ -58,7 +58,9 @@ class PersonalQuestionImportTests(unittest.TestCase):
         )
         service = QuestionImportService(self.alice, self.public)
         preview = service.preview(path)
-        self.assertEqual((preview.total, len(preview.valid), preview.duplicates, preview.errors), (5, 1, 3, 1))
+        self.assertEqual(
+            (preview.total, len(preview.valid), preview.duplicates, preview.errors), (5, 1, 3, 1)
+        )
         self.assertEqual([q.id for q in service.confirm(preview)], ["MINE001"])
         self.assertEqual([q.id for q in self.alice.all()], ["MINE001"])
         self.assertEqual(self.bob.all(), [])
@@ -68,7 +70,7 @@ class PersonalQuestionImportTests(unittest.TestCase):
         path.write_text(
             "id,subject,topic,difficulty,type,question,options,answer,explanation\n"
             'CSV001,Math,Addition,easy,single_choice,One plus one?,"[""1"", ""2""]",2,Correct.\n'
-            'CSV002,Math,Addition,easy,single_choice,Broken,not-json,2,Broken.\n',
+            "CSV002,Math,Addition,easy,single_choice,Broken,not-json,2,Broken.\n",
             encoding="utf-8",
         )
         preview = QuestionImportService(self.alice, self.public).preview(path)

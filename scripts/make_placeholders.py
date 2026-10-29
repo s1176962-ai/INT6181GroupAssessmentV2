@@ -1,8 +1,8 @@
 """Create soft subject placeholder PNGs with the stdlib only."""
 
-from pathlib import Path
 import struct
 import zlib
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "assets" / "images"

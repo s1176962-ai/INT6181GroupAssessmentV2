@@ -39,7 +39,9 @@ def font(size: int):
 def canvas():
     img = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle((16, 16, W - 16, H - 16), radius=24, fill=SURFACE, outline=(228, 223, 212), width=2)
+    draw.rounded_rectangle(
+        (16, 16, W - 16, H - 16), radius=24, fill=SURFACE, outline=(228, 223, 212), width=2
+    )
     return img, draw
 
 
@@ -68,7 +70,12 @@ def draw_sun_snow(draw):
     for angle in range(0, 360, 45):
         rad = math.radians(angle)
         draw.line(
-            (130 + 50 * math.cos(rad), 110 + 50 * math.sin(rad), 130 + 70 * math.cos(rad), 110 + 70 * math.sin(rad)),
+            (
+                130 + 50 * math.cos(rad),
+                110 + 50 * math.sin(rad),
+                130 + 70 * math.cos(rad),
+                110 + 70 * math.sin(rad),
+            ),
             fill=WARM,
             width=3,
         )
@@ -77,7 +84,9 @@ def draw_sun_snow(draw):
 
 
 def draw_book(draw):
-    draw.rounded_rectangle((150, 70, 330, 200), radius=8, fill=(250, 245, 235), outline=PRIMARY, width=2)
+    draw.rounded_rectangle(
+        (150, 70, 330, 200), radius=8, fill=(250, 245, 235), outline=PRIMARY, width=2
+    )
     draw.line((240, 70, 240, 200), fill=PRIMARY, width=3)
     for y in (100, 130, 160):
         draw.line((160, y, 225, y), fill=MUTED, width=2)
@@ -127,7 +136,9 @@ def draw_gift(draw):
 
 
 def draw_am(draw):
-    draw.rounded_rectangle((140, 80, 340, 180), radius=16, fill=(230, 245, 235), outline=PRIMARY, width=3)
+    draw.rounded_rectangle(
+        (140, 80, 340, 180), radius=16, fill=(230, 245, 235), outline=PRIMARY, width=3
+    )
     draw.text((W / 2, 130), "I am", fill=PRIMARY, font=font(36), anchor="mm")
 
 
@@ -153,8 +164,12 @@ def draw_umbrella(draw):
 
 
 def draw_ifthen(draw):
-    draw.rounded_rectangle((70, 90, 210, 170), radius=12, fill=(235, 245, 255), outline=ACCENT, width=2)
-    draw.rounded_rectangle((270, 90, 410, 170), radius=12, fill=(235, 245, 235), outline=PRIMARY, width=2)
+    draw.rounded_rectangle(
+        (70, 90, 210, 170), radius=12, fill=(235, 245, 255), outline=ACCENT, width=2
+    )
+    draw.rounded_rectangle(
+        (270, 90, 410, 170), radius=12, fill=(235, 245, 235), outline=PRIMARY, width=2
+    )
     draw.polygon([(220, 120), (260, 130), (220, 140)], fill=MUTED)
     draw.text((140, 130), "If…", fill=ACCENT, font=font(22), anchor="mm")
     draw.text((340, 130), "then…", fill=PRIMARY, font=font(22), anchor="mm")
@@ -162,7 +177,9 @@ def draw_ifthen(draw):
 
 def draw_passive(draw):
     draw.rounded_rectangle((90, 90, 220, 170), radius=10, fill=SURFACE, outline=MUTED, width=2)
-    draw.rounded_rectangle((260, 90, 390, 170), radius=10, fill=(230, 245, 235), outline=PRIMARY, width=3)
+    draw.rounded_rectangle(
+        (260, 90, 390, 170), radius=10, fill=(230, 245, 235), outline=PRIMARY, width=3
+    )
     draw.text((155, 130), "active", fill=MUTED, font=font(18), anchor="mm")
     draw.text((325, 130), "passive", fill=PRIMARY, font=font(18), anchor="mm")
 
@@ -208,7 +225,9 @@ def draw_neither(draw):
 
 
 def draw_math_expr(draw, text):
-    draw.rounded_rectangle((80, 85, 400, 175), radius=18, fill=(235, 245, 238), outline=PRIMARY, width=3)
+    draw.rounded_rectangle(
+        (80, 85, 400, 175), radius=18, fill=(235, 245, 238), outline=PRIMARY, width=3
+    )
     draw.text((W / 2, 130), text, fill=PRIMARY, font=font(34), anchor="mm")
 
 
@@ -247,7 +266,9 @@ def draw_bars(draw):
     heights = [60, 100, 140, 180]
     for i, h in enumerate(heights):
         x = 120 + i * 60
-        draw.rounded_rectangle((x, 210 - h, x + 40, 210), radius=6, fill=PRIMARY if i % 2 == 0 else ACCENT)
+        draw.rounded_rectangle(
+            (x, 210 - h, x + 40, 210), radius=6, fill=PRIMARY if i % 2 == 0 else ACCENT
+        )
 
 
 def draw_die(draw):
@@ -279,7 +300,9 @@ def draw_mars(draw):
 
 
 def draw_copper(draw):
-    draw.rounded_rectangle((150, 100, 330, 150), radius=8, fill=(200, 120, 60), outline=INK, width=2)
+    draw.rounded_rectangle(
+        (150, 100, 330, 150), radius=8, fill=(200, 120, 60), outline=INK, width=2
+    )
     draw.ellipse((140, 95, 170, 155), fill=(220, 150, 80), outline=INK, width=2)
     draw.ellipse((310, 95, 340, 155), fill=(220, 150, 80), outline=INK, width=2)
     for x in range(180, 310, 25):
@@ -287,7 +310,9 @@ def draw_copper(draw):
 
 
 def draw_ice(draw):
-    draw.rounded_rectangle((170, 90, 310, 190), radius=12, fill=(210, 235, 250), outline=ACCENT, width=3)
+    draw.rounded_rectangle(
+        (170, 90, 310, 190), radius=12, fill=(210, 235, 250), outline=ACCENT, width=3
+    )
     draw.polygon([(190, 110), (210, 150), (170, 150)], fill=SURFACE)
 
 
@@ -329,7 +354,9 @@ def draw_gravity(draw):
 
 
 def draw_newton(draw):
-    draw.rounded_rectangle((140, 90, 340, 170), radius=14, fill=(235, 245, 255), outline=ACCENT, width=3)
+    draw.rounded_rectangle(
+        (140, 90, 340, 170), radius=14, fill=(235, 245, 255), outline=ACCENT, width=3
+    )
     draw.text((W / 2, 130), "1 N = 1 kg·m/s²", fill=ACCENT, font=font(22), anchor="mm")
 
 
