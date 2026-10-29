@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+.ruff_cache/
+.pytest_cache/
+.env
+.env.*
+!.env.example
+data/progress.json
+data/users.json
+data/profiles/
+data/backups/
+data/account_backups/
+data/settings.json
+.tmp-*
+
+data/display.json

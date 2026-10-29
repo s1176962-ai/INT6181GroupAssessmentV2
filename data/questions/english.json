@@ -1,0 +1,342 @@
+[
+  {
+    "id": "ENG001",
+    "subject": "English",
+    "topic": "Vocabulary",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What is the meaning of apple?",
+    "options": [
+      "苹果",
+      "香蕉",
+      "橙子"
+    ],
+    "answer": "苹果",
+    "explanation": "Apple means 苹果 in Chinese.",
+    "question_image": "assets/images/questions/ENG001.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG002",
+    "subject": "English",
+    "topic": "Vocabulary",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Which word is the opposite of hot?",
+    "options": [
+      "Cold",
+      "Tall",
+      "Fast"
+    ],
+    "answer": "Cold",
+    "explanation": "Cold is the opposite of hot.",
+    "question_image": "assets/images/questions/ENG002.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG003",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Choose the correct sentence.",
+    "options": [
+      "She go to school.",
+      "She goes to school.",
+      "She going to school."
+    ],
+    "answer": "She goes to school.",
+    "explanation": "Use goes with the third-person singular subject she in the present simple.",
+    "question_image": "assets/images/questions/ENG003.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG004",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Choose the plural of child.",
+    "options": [
+      "Childs",
+      "Children",
+      "Childes"
+    ],
+    "answer": "Children",
+    "explanation": "Child has the irregular plural children.",
+    "question_image": "assets/images/questions/ENG004.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG005",
+    "subject": "English",
+    "topic": "Vocabulary",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Which word means very large?",
+    "options": [
+      "Tiny",
+      "Huge",
+      "Narrow"
+    ],
+    "answer": "Huge",
+    "explanation": "Huge means very large.",
+    "question_image": "assets/images/questions/ENG005.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG006",
+    "subject": "English",
+    "topic": "Vocabulary",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Which word means happy?",
+    "options": [
+      "Glad",
+      "Angry",
+      "Tired"
+    ],
+    "answer": "Glad",
+    "explanation": "Glad means pleased or happy.",
+    "question_image": "assets/images/questions/ENG006.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG007",
+    "subject": "English",
+    "topic": "Vocabulary",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Which word is a color?",
+    "options": [
+      "Blue",
+      "Run",
+      "Chair"
+    ],
+    "answer": "Blue",
+    "explanation": "Blue names a color.",
+    "question_image": "assets/images/questions/ENG007.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG008",
+    "subject": "English",
+    "topic": "Vocabulary",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What is a synonym of quick?",
+    "options": [
+      "Fast",
+      "Slow",
+      "Late"
+    ],
+    "answer": "Fast",
+    "explanation": "Quick and fast both describe speed.",
+    "question_image": "assets/images/questions/ENG008.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG009",
+    "subject": "English",
+    "topic": "Vocabulary",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Which word is the opposite of generous?",
+    "options": [
+      "Selfish",
+      "Kind",
+      "Helpful"
+    ],
+    "answer": "Selfish",
+    "explanation": "A selfish person puts their own needs first, unlike a generous person.",
+    "question_image": "assets/images/questions/ENG009.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG010",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Complete: I ___ a student.",
+    "options": [
+      "am",
+      "is",
+      "are"
+    ],
+    "answer": "am",
+    "explanation": "Use am with the subject I.",
+    "question_image": "assets/images/questions/ENG010.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG011",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Complete: They ___ playing now.",
+    "options": [
+      "is",
+      "are",
+      "am"
+    ],
+    "answer": "are",
+    "explanation": "Use are with the plural subject they.",
+    "question_image": "assets/images/questions/ENG011.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG012",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Choose the past tense of go.",
+    "options": [
+      "goed",
+      "went",
+      "gone"
+    ],
+    "answer": "went",
+    "explanation": "Went is the simple past form; gone is the past participle.",
+    "question_image": "assets/images/questions/ENG012.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG013",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Complete: There is ___ umbrella by the door.",
+    "options": [
+      "a",
+      "an",
+      "many"
+    ],
+    "answer": "an",
+    "explanation": "Use an before the vowel sound at the beginning of umbrella.",
+    "question_image": "assets/images/questions/ENG013.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG014",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "Complete: If I had studied, I ___ passed.",
+    "options": [
+      "will have",
+      "would have",
+      "would"
+    ],
+    "answer": "would have",
+    "explanation": "The third conditional uses would have plus a past participle for an unreal past result.",
+    "question_image": "assets/images/questions/ENG014.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG015",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "Choose the passive sentence.",
+    "options": [
+      "The chef cooked dinner.",
+      "Dinner was cooked by the chef.",
+      "The chef is cooking."
+    ],
+    "answer": "Dinner was cooked by the chef.",
+    "explanation": "In the passive voice, the subject receives the action: was cooked.",
+    "question_image": "assets/images/questions/ENG015.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG016",
+    "subject": "English",
+    "topic": "Reading",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Mia has two cats and one dog. How many pets does Mia have?",
+    "options": [
+      "Two",
+      "Three",
+      "Four"
+    ],
+    "answer": "Three",
+    "explanation": "Two cats plus one dog equals three pets.",
+    "question_image": "assets/images/questions/ENG016.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG017",
+    "subject": "English",
+    "topic": "Reading",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Leo missed the bus because he woke up late. Why did he miss the bus?",
+    "options": [
+      "He woke up late.",
+      "The bus broke down.",
+      "He was early."
+    ],
+    "answer": "He woke up late.",
+    "explanation": "The sentence explicitly states the cause: he woke up late.",
+    "question_image": "assets/images/questions/ENG017.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG018",
+    "subject": "English",
+    "topic": "Vocabulary",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "What does reluctant mean?",
+    "options": [
+      "Unwilling",
+      "Excited",
+      "Certain"
+    ],
+    "answer": "Unwilling",
+    "explanation": "Reluctant means hesitant or unwilling to do something.",
+    "question_image": "assets/images/questions/ENG018.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG019",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Choose the comparative form of good.",
+    "options": [
+      "Gooder",
+      "Better",
+      "Best"
+    ],
+    "answer": "Better",
+    "explanation": "Good has the irregular comparative better and superlative best.",
+    "question_image": "assets/images/questions/ENG019.png",
+    "option_images": null
+  },
+  {
+    "id": "ENG020",
+    "subject": "English",
+    "topic": "Grammar",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "Complete: Neither of the answers ___ correct.",
+    "options": [
+      "is",
+      "are",
+      "be"
+    ],
+    "answer": "is",
+    "explanation": "In formal usage neither is singular, so it takes is.",
+    "question_image": "assets/images/questions/ENG020.png",
+    "option_images": null
+  }
+]

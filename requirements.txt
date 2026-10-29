@@ -1,0 +1,2 @@
+# PDF export dependency; core application uses the standard library.
+reportlab>=4.0,<5

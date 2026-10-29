@@ -1,0 +1,1 @@
+"""Offline, configurable quiz platform."""

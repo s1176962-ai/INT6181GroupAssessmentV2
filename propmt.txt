@@ -1,0 +1,258 @@
+# Task: Refactor and Complete the Existing Python Quiz Platform
+
+You are acting as the lead Python developer for a student group project.
+
+We already have a partially completed Python quiz platform in this workspace. Your task is to inspect the existing project and transform it into a complete, reliable, beginner-friendly, configurable multi-subject quiz application.
+
+Do not assume the existing code is correct or incorrect before inspecting it. Reuse useful existing code, preserve assignment-specific requirements, and refactor or replace incomplete components when necessary.
+
+The SRS in this project is the primary functional specification. If the SRS has not yet been saved to the project, create `docs/SRS.md` using the requirements provided by the user. Also inspect any existing README, assignment instructions, source files, tests, and project structure before making changes.
+
+## 1. First: Inspect the Existing Project
+
+Before modifying code:
+
+1. Inspect the full project directory and identify the current application structure.
+2. Read the existing source code, configuration files, tests, README, SRS, and any available assignment instructions.
+3. Identify completed features, incomplete features, bugs, duplicated code, and unnecessary complexity.
+4. Identify the existing interface technology and dependencies.
+5. Check whether the existing project contains required file names, directory structures, or assignment-specific constraints.
+6. Create a concise implementation plan based on the actual files.
+
+Do not delete the existing project and immediately generate a completely unrelated replacement.
+
+Preserve useful code and existing assignment requirements. If a major rewrite is necessary, explain why and keep the application consistent with the established SRS.
+
+After the inspection, continue with implementation. Do not stop after producing only an analysis or plan.
+
+## 2. Technology and Design Principles
+
+Follow these principles:
+
+- Use Python as the main programming language.
+- Prefer the existing interface technology if it is suitable.
+- If the current interface is unsuitable, use Tkinter for a simple desktop application.
+- Do not mix different interface technologies.
+- Use JSON for question data, wrong-question records, and learning history.
+- Keep the code understandable for beginner-level Python students.
+- Use clear function and variable names.
+- Separate major responsibilities without creating excessive files or complicated abstractions.
+- Avoid unnecessary frameworks, dependencies, design patterns, and advanced architecture.
+- Do not hardcode the entire question bank into the application logic.
+- Make sure new subjects can be added primarily by adding question data.
+- Use relative paths or a reliable project-root-based path strategy for data and images.
+- Keep existing assignment constraints and required naming conventions.
+
+Do not introduce a database, web server, external API, authentication system, or AI service unless the existing assignment specifically requires it.
+
+## 3. Implement the Complete Application
+
+### Module A: Quiz Interface
+
+Implement a working quiz interface that:
+
+- Displays the current question and its answer options.
+- Supports single-choice questions in the first version.
+- Allows a student to select and submit an answer.
+- Immediately displays correct or incorrect feedback.
+- Shows the correct answer and explanation after submission.
+- Prevents multiple submissions for the same question.
+- Provides a Next Question button.
+- Displays progress, such as Question 3 of 10.
+- Displays a final result after all questions are completed.
+
+Keep the interface clear, consistent, and suitable for a student demonstration.
+
+### Module B: Wrong-Question Notebook
+
+Implement a working wrong-question notebook that:
+
+- Automatically records incorrectly answered questions.
+- Uses question IDs to avoid duplicate entries.
+- Displays saved questions and their correct answers.
+- Allows students to retry saved questions.
+- Updates the wrong-question status after a successful review according to the SRS.
+- Persists the notebook across application restarts.
+- Handles missing or deleted questions gracefully.
+
+The wrong-question notebook must use the same question data as the main quiz.
+
+### Module C: Subject Selection and Quiz Configuration
+
+Implement a configuration interface that allows users to:
+
+- Select a subject, such as English, Mathematics, or Science.
+- Select a topic and difficulty when available.
+- Choose the number of questions.
+- Start a quiz using the selected settings.
+- Randomise question order when appropriate.
+- Receive a clear message when no questions match the selected configuration.
+
+Subjects and available choices should be derived from the question data rather than hardcoded throughout the program.
+
+### Module D: Score and Learning History
+
+Implement a results and progress feature that:
+
+- Calculates the total number of questions, correct answers, incorrect answers, and accuracy.
+- Displays the final result after a quiz.
+- Saves the quiz date and time, subject, question count, and result.
+- Displays previous quiz attempts.
+- Persists learning history across application restarts.
+
+Use consistent score calculations and test edge cases, including an empty question list.
+
+### Module E: Question Bank and Image Support
+
+Implement a configurable question bank that:
+
+- Loads questions from JSON files.
+- Supports adding, editing, and removing questions through data maintenance or a simple management function.
+- Validates required fields and question IDs.
+- Supports subject, topic, difficulty, question type, question text, options, correct answer, and explanation.
+- Supports optional question images and answer-option images.
+- Displays images correctly when available.
+- Handles missing image files without crashing.
+- Allows text-only questions to work normally.
+
+Provide sample questions for at least three subjects.
+
+Use a consistent schema. A question should follow a structure similar to:
+
+{
+  "id": "ENG001",
+  "subject": "English",
+  "topic": "Vocabulary",
+  "difficulty": "easy",
+  "type": "single_choice",
+  "question": "Which animal can fly?",
+  "question_image": null,
+  "options": ["Dog", "Bird", "Cat"],
+  "option_images": null,
+  "answer": "Bird",
+  "explanation": "Birds have wings and most can fly."
+}
+
+Adapt the schema if the existing project already has a suitable structure, but document the final format and maintain consistency across all modules.
+
+### Module F: Main Menu and System Integration
+
+Integrate all features into one application.
+
+The main menu should provide access to:
+
+- Start a quiz.
+- Review wrong questions.
+- View scores and learning history.
+- Exit the application.
+
+Ensure that the user can navigate between these features without restarting the program unnecessarily.
+
+Keep the responsibilities of question loading, answer checking, score calculation, and persistence separate from the interface wherever practical.
+
+Handle common errors with clear user-facing messages.
+
+## 4. Data Persistence and Reliability
+
+Create or update the necessary data files.
+
+Requirements:
+
+- Sample question data must be provided.
+- Wrong-question records must persist.
+- Learning history must persist.
+- Missing files should be handled safely.
+- Invalid JSON or invalid question records should produce useful error messages.
+- Data should not be silently overwritten or lost during normal use.
+- Use a reliable method to resolve paths regardless of the current working directory.
+
+Do not commit real personal information or secrets into the project.
+
+## 5. Automated Testing
+
+Inspect and update existing tests before creating new ones.
+
+Add or update tests covering:
+
+1. Question loading and data validation.
+2. Subject and difficulty filtering.
+3. Random question selection and question-count limits.
+4. Correct and incorrect answer checking.
+5. Score and accuracy calculations.
+6. Wrong-question creation, deduplication, and review updates.
+7. Saving and loading learning history.
+8. Missing files and invalid JSON.
+9. Image-path handling where practical.
+
+Use Python's standard `unittest` framework unless the existing project already uses a suitable testing framework.
+
+Keep tests independent of external APIs and avoid requiring manual interaction with the GUI for every test.
+
+Run the available automated tests after implementation. Fix failures caused by your changes. If a test cannot be run, explain the reason and do not claim that it passed.
+
+## 6. Documentation and Deliverables
+
+Create or update the following deliverables as appropriate to the existing project:
+
+- `docs/SRS.md` — complete software requirements specification.
+- `README.md` — installation, setup, execution, features, and usage instructions.
+- Sample question-bank JSON files for at least three subjects.
+- Example images for demonstrating image support, or clear instructions for supplying images.
+- Automated tests.
+- A concise test report, such as `docs/TEST_REPORT.md`.
+- A short module guide explaining the responsibility of each major source file.
+
+Do not create duplicate documentation unnecessarily. Update existing files where appropriate.
+
+## 7. Development Workflow
+
+Work through the following stages:
+
+Stage 1 — Inspect the existing project and assignment constraints.
+
+Stage 2 — Identify the implementation gaps and establish a clear plan.
+
+Stage 3 — Confirm the data schema and the responsibilities of each component.
+
+Stage 4 — Implement the core question loading, configuration, and quiz workflow.
+
+Stage 5 — Implement scoring, the wrong-question notebook, and learning history.
+
+Stage 6 — Integrate the main menu and image support.
+
+Stage 7 — Add and run automated tests. Fix discovered issues.
+
+Stage 8 — Update the README, SRS, test report, and usage instructions.
+
+You may make reasonable implementation decisions without asking about every minor detail. However, do not overwrite important existing work or violate assignment requirements without first examining them.
+
+## 8. Definition of Done
+
+The project is complete only when:
+
+- The application can be launched using documented instructions.
+- Users can select subjects and configure a quiz.
+- Questions are loaded from external data.
+- Students can answer questions and receive immediate feedback.
+- Scores are calculated correctly.
+- Incorrect answers are saved and can be reviewed.
+- Learning history survives application restarts.
+- Image questions or image options can be demonstrated.
+- At least three subjects are supported through configuration and data.
+- The main features have appropriate automated tests.
+- Documentation describes how to run and extend the application.
+- Known limitations and any unverified behaviour are explicitly documented.
+
+## 9. Final Response
+
+When finished, provide:
+
+1. A summary of the original project and the changes made.
+2. The final project structure.
+3. The features implemented.
+4. The commands needed to run the application and tests.
+5. The actual test results.
+6. Any remaining bugs, limitations, or unverified functionality.
+7. A suggested demonstration sequence for the group presentation.
+
+Prioritise a complete, working, understandable application over unnecessary complexity. Do not merely generate code snippets: modify the actual project files in the current workspace, run the relevant tests, and report what was genuinely verified.

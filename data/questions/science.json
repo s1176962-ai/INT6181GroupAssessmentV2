@@ -1,0 +1,342 @@
+[
+  {
+    "id": "SCI001",
+    "subject": "Science",
+    "topic": "Biology",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Which part of a plant usually absorbs water from soil?",
+    "options": [
+      "Roots",
+      "Flowers",
+      "Fruit"
+    ],
+    "answer": "Roots",
+    "explanation": "Roots absorb water and minerals from soil.",
+    "question_image": "assets/images/questions/SCI001.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI002",
+    "subject": "Science",
+    "topic": "Astronomy",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Which planet is known as the Red Planet?",
+    "options": [
+      "Earth",
+      "Mars",
+      "Venus"
+    ],
+    "answer": "Mars",
+    "explanation": "Iron oxide on its surface gives Mars a reddish appearance.",
+    "question_image": "assets/images/questions/SCI002.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI003",
+    "subject": "Science",
+    "topic": "Physics",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Which material is a good electrical conductor?",
+    "options": [
+      "Rubber",
+      "Copper",
+      "Glass"
+    ],
+    "answer": "Copper",
+    "explanation": "Copper is a metal with mobile electrons that conduct electricity.",
+    "question_image": "assets/images/questions/SCI003.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI004",
+    "subject": "Science",
+    "topic": "Matter",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What is the solid form of water called?",
+    "options": [
+      "Steam",
+      "Ice",
+      "Air"
+    ],
+    "answer": "Ice",
+    "explanation": "Ice is water in its solid state.",
+    "question_image": "assets/images/questions/SCI004.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI005",
+    "subject": "Science",
+    "topic": "Biology",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Which gas do plants take in for photosynthesis?",
+    "options": [
+      "Carbon dioxide",
+      "Helium",
+      "Hydrogen"
+    ],
+    "answer": "Carbon dioxide",
+    "explanation": "Plants use carbon dioxide and water to make sugars using light energy.",
+    "question_image": "assets/images/questions/SCI005.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI006",
+    "subject": "Science",
+    "topic": "Biology",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Which organ pumps blood around the human body?",
+    "options": [
+      "Heart",
+      "Lung",
+      "Stomach"
+    ],
+    "answer": "Heart",
+    "explanation": "The heart contracts to pump blood through blood vessels.",
+    "question_image": "assets/images/questions/SCI006.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI007",
+    "subject": "Science",
+    "topic": "Biology",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Which structure is the basic unit of life?",
+    "options": [
+      "Cell",
+      "Rock",
+      "Planet"
+    ],
+    "answer": "Cell",
+    "explanation": "Cells are the basic structural and functional units of living organisms.",
+    "question_image": "assets/images/questions/SCI007.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI008",
+    "subject": "Science",
+    "topic": "Biology",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What do herbivores primarily eat?",
+    "options": [
+      "Plants",
+      "Only meat",
+      "Rocks"
+    ],
+    "answer": "Plants",
+    "explanation": "Herbivores feed on plants or plant material.",
+    "question_image": "assets/images/questions/SCI008.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI009",
+    "subject": "Science",
+    "topic": "Biology",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "Which cell structure contains most genetic material in a typical animal cell?",
+    "options": [
+      "Nucleus",
+      "Cell membrane",
+      "Ribosome"
+    ],
+    "answer": "Nucleus",
+    "explanation": "Most DNA in a typical animal cell is stored in its nucleus.",
+    "question_image": "assets/images/questions/SCI009.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI010",
+    "subject": "Science",
+    "topic": "Physics",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Which force pulls objects toward Earth?",
+    "options": [
+      "Gravity",
+      "Friction",
+      "Magnetism"
+    ],
+    "answer": "Gravity",
+    "explanation": "Gravity attracts objects with mass toward one another.",
+    "question_image": "assets/images/questions/SCI010.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI011",
+    "subject": "Science",
+    "topic": "Physics",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What is the SI unit of force?",
+    "options": [
+      "Newton",
+      "Watt",
+      "Joule"
+    ],
+    "answer": "Newton",
+    "explanation": "Force is measured in newtons; watts measure power and joules measure energy.",
+    "question_image": "assets/images/questions/SCI011.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI012",
+    "subject": "Science",
+    "topic": "Physics",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Which travels faster in air?",
+    "options": [
+      "Sound",
+      "Light",
+      "They have equal speeds"
+    ],
+    "answer": "Light",
+    "explanation": "Light travels much faster than sound, explaining the delay between lightning and thunder.",
+    "question_image": "assets/images/questions/SCI012.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI013",
+    "subject": "Science",
+    "topic": "Physics",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "A 2 kg object accelerates at 3 m/s². What is the net force?",
+    "options": [
+      "1.5 N",
+      "5 N",
+      "6 N"
+    ],
+    "answer": "6 N",
+    "explanation": "Newton's second law gives F = ma = 2 × 3 = 6 N.",
+    "question_image": "assets/images/questions/SCI013.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI014",
+    "subject": "Science",
+    "topic": "Matter",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What is the change from liquid water to water vapor called?",
+    "options": [
+      "Evaporation",
+      "Freezing",
+      "Melting"
+    ],
+    "answer": "Evaporation",
+    "explanation": "Evaporation is a change from liquid to gas at the surface.",
+    "question_image": "assets/images/questions/SCI014.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI015",
+    "subject": "Science",
+    "topic": "Matter",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Which substance is a chemical element?",
+    "options": [
+      "Oxygen",
+      "Water",
+      "Table salt"
+    ],
+    "answer": "Oxygen",
+    "explanation": "Oxygen consists of one type of atom; water and table salt are compounds.",
+    "question_image": "assets/images/questions/SCI015.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI016",
+    "subject": "Science",
+    "topic": "Matter",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "A neutral atom has 6 protons. How many electrons does it have?",
+    "options": [
+      "3",
+      "6",
+      "12"
+    ],
+    "answer": "6",
+    "explanation": "A neutral atom has equal numbers of positively charged protons and negatively charged electrons.",
+    "question_image": "assets/images/questions/SCI016.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI017",
+    "subject": "Science",
+    "topic": "Astronomy",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What is the closest star to Earth?",
+    "options": [
+      "The Sun",
+      "Sirius",
+      "Polaris"
+    ],
+    "answer": "The Sun",
+    "explanation": "The Sun is the star at the center of our solar system.",
+    "question_image": "assets/images/questions/SCI017.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI018",
+    "subject": "Science",
+    "topic": "Astronomy",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What primarily causes day and night on Earth?",
+    "options": [
+      "Earth rotating on its axis",
+      "The Moon rotating",
+      "Clouds covering the Sun"
+    ],
+    "answer": "Earth rotating on its axis",
+    "explanation": "As Earth rotates, different regions face toward or away from the Sun.",
+    "question_image": "assets/images/questions/SCI018.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI019",
+    "subject": "Science",
+    "topic": "Environment",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Which energy source is renewable?",
+    "options": [
+      "Solar energy",
+      "Coal",
+      "Oil"
+    ],
+    "answer": "Solar energy",
+    "explanation": "Sunlight is replenished naturally; coal and oil are finite fossil fuels.",
+    "question_image": "assets/images/questions/SCI019.png",
+    "option_images": null
+  },
+  {
+    "id": "SCI020",
+    "subject": "Science",
+    "topic": "Environment",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "What role do decomposers play in an ecosystem?",
+    "options": [
+      "Recycle nutrients from dead matter",
+      "Produce sunlight",
+      "Stop all plant growth"
+    ],
+    "answer": "Recycle nutrients from dead matter",
+    "explanation": "Decomposers break down dead organisms and return nutrients to the ecosystem.",
+    "question_image": "assets/images/questions/SCI020.png",
+    "option_images": null
+  }
+]

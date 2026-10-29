@@ -1,0 +1,344 @@
+[
+  {
+    "id": "MAT001",
+    "subject": "Mathematics",
+    "topic": "Arithmetic",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What is 7 + 8?",
+    "options": [
+      "14",
+      "15",
+      "16"
+    ],
+    "answer": "15",
+    "explanation": "7 + 8 = 15.",
+    "question_image": "assets/images/questions/MAT001.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT002",
+    "subject": "Mathematics",
+    "topic": "Arithmetic",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What is 3 × (4 + 2)?",
+    "options": [
+      "14",
+      "18",
+      "20"
+    ],
+    "answer": "18",
+    "explanation": "Calculate the brackets first: 4 + 2 = 6; 3 × 6 = 18.",
+    "question_image": "assets/images/questions/MAT002.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT003",
+    "subject": "Mathematics",
+    "topic": "Geometry",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What shape is shown?",
+    "options": [
+      "Circle",
+      "Square",
+      "Triangle"
+    ],
+    "answer": "Circle",
+    "explanation": "A circle has a curved boundary and no corners.",
+    "question_image": "assets/circle.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT004",
+    "subject": "Mathematics",
+    "topic": "Geometry",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Choose the picture of a square.",
+    "options": [
+      "Picture A",
+      "Picture B"
+    ],
+    "answer": "Picture B",
+    "explanation": "A square has four equal sides and four right angles.",
+    "question_image": "assets/images/questions/MAT004.png",
+    "option_images": [
+      "assets/circle.png",
+      "assets/square.png"
+    ]
+  },
+  {
+    "id": "MAT005",
+    "subject": "Mathematics",
+    "topic": "Fractions",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What is one half plus one quarter?",
+    "options": [
+      "1/4",
+      "2/4",
+      "3/4"
+    ],
+    "answer": "3/4",
+    "explanation": "1/2 = 2/4, so 2/4 + 1/4 = 3/4.",
+    "question_image": "assets/images/questions/MAT005.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT006",
+    "subject": "Mathematics",
+    "topic": "Arithmetic",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What is 9 × 6?",
+    "options": [
+      "54",
+      "45",
+      "63"
+    ],
+    "answer": "54",
+    "explanation": "Nine groups of six make 54.",
+    "question_image": "assets/images/questions/MAT006.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT007",
+    "subject": "Mathematics",
+    "topic": "Arithmetic",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What is 56 ÷ 7?",
+    "options": [
+      "7",
+      "8",
+      "9"
+    ],
+    "answer": "8",
+    "explanation": "7 × 8 = 56, so 56 ÷ 7 = 8.",
+    "question_image": "assets/images/questions/MAT007.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT008",
+    "subject": "Mathematics",
+    "topic": "Arithmetic",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What is 5² + 3²?",
+    "options": [
+      "16",
+      "34",
+      "64"
+    ],
+    "answer": "34",
+    "explanation": "5² = 25 and 3² = 9; 25 + 9 = 34.",
+    "question_image": "assets/images/questions/MAT008.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT009",
+    "subject": "Mathematics",
+    "topic": "Arithmetic",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What is -4 + 9?",
+    "options": [
+      "-13",
+      "5",
+      "13"
+    ],
+    "answer": "5",
+    "explanation": "Starting at -4 and moving 9 units right reaches 5.",
+    "question_image": "assets/images/questions/MAT009.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT010",
+    "subject": "Mathematics",
+    "topic": "Fractions",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Which fraction equals one half?",
+    "options": [
+      "2/4",
+      "1/4",
+      "3/4"
+    ],
+    "answer": "2/4",
+    "explanation": "Dividing the numerator and denominator of 2/4 by 2 gives 1/2.",
+    "question_image": "assets/images/questions/MAT010.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT011",
+    "subject": "Mathematics",
+    "topic": "Fractions",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What is 2/3 × 3/4?",
+    "options": [
+      "1/2",
+      "5/7",
+      "2/7"
+    ],
+    "answer": "1/2",
+    "explanation": "Multiply numerators and denominators: 6/12 = 1/2.",
+    "question_image": "assets/images/questions/MAT011.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT012",
+    "subject": "Mathematics",
+    "topic": "Fractions",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "What is 3/4 ÷ 2/5?",
+    "options": [
+      "3/10",
+      "15/8",
+      "8/15"
+    ],
+    "answer": "15/8",
+    "explanation": "Dividing by 2/5 means multiplying by 5/2: 3/4 × 5/2 = 15/8.",
+    "question_image": "assets/images/questions/MAT012.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT013",
+    "subject": "Mathematics",
+    "topic": "Algebra",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "Solve x + 5 = 12.",
+    "options": [
+      "5",
+      "7",
+      "17"
+    ],
+    "answer": "7",
+    "explanation": "Subtract 5 from both sides: x = 7.",
+    "question_image": "assets/images/questions/MAT013.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT014",
+    "subject": "Mathematics",
+    "topic": "Algebra",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "Solve 3x - 4 = 11.",
+    "options": [
+      "3",
+      "5",
+      "7"
+    ],
+    "answer": "5",
+    "explanation": "Add 4 to get 3x = 15, then divide by 3.",
+    "question_image": "assets/images/questions/MAT014.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT015",
+    "subject": "Mathematics",
+    "topic": "Algebra",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "Which pair solves x² = 25?",
+    "options": [
+      "5 only",
+      "-5 only",
+      "-5 and 5"
+    ],
+    "answer": "-5 and 5",
+    "explanation": "Both (-5)² and 5² equal 25.",
+    "question_image": "assets/images/questions/MAT015.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT016",
+    "subject": "Mathematics",
+    "topic": "Percentages",
+    "difficulty": "easy",
+    "type": "single_choice",
+    "question": "What is 10% of 80?",
+    "options": [
+      "8",
+      "10",
+      "18"
+    ],
+    "answer": "8",
+    "explanation": "10% is one tenth, and 80 ÷ 10 = 8.",
+    "question_image": "assets/images/questions/MAT016.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT017",
+    "subject": "Mathematics",
+    "topic": "Percentages",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "A 200-unit item is discounted by 15%. What is its new price?",
+    "options": [
+      "170",
+      "185",
+      "230"
+    ],
+    "answer": "170",
+    "explanation": "15% of 200 is 30. Subtract the discount: 200 - 30 = 170.",
+    "question_image": "assets/images/questions/MAT017.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT018",
+    "subject": "Mathematics",
+    "topic": "Statistics",
+    "difficulty": "medium",
+    "type": "single_choice",
+    "question": "What is the mean of 2, 4, 6, and 8?",
+    "options": [
+      "4",
+      "5",
+      "6"
+    ],
+    "answer": "5",
+    "explanation": "The sum is 20; divide by the four values to get 5.",
+    "question_image": "assets/images/questions/MAT018.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT019",
+    "subject": "Mathematics",
+    "topic": "Probability",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "A fair six-sided die is rolled. What is the probability of a number greater than 4?",
+    "options": [
+      "1/6",
+      "1/3",
+      "1/2"
+    ],
+    "answer": "1/3",
+    "explanation": "Two outcomes, 5 and 6, qualify out of six: 2/6 = 1/3.",
+    "question_image": "assets/images/questions/MAT019.png",
+    "option_images": null
+  },
+  {
+    "id": "MAT020",
+    "subject": "Mathematics",
+    "topic": "Algebra",
+    "difficulty": "hard",
+    "type": "single_choice",
+    "question": "Expand (x + 2)(x + 3).",
+    "options": [
+      "x² + 5x + 6",
+      "x² + 6",
+      "x² + 6x + 5"
+    ],
+    "answer": "x² + 5x + 6",
+    "explanation": "Distribute each term: x² + 3x + 2x + 6 = x² + 5x + 6.",
+    "question_image": "assets/images/questions/MAT020.png",
+    "option_images": null
+  }
+]
