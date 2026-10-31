@@ -18,7 +18,7 @@ class UserPage:
             app.access_error(exc)
             return
         self.editing = False
-        app.clear(self.tr("用户管理"))
+        app.clear(self.tr("用户管理"), show_heading=False, back=app.home)
         app.label(
             self.tr("管理员可查看学习数据、修改账号、重置密码、停用登录或调整角色。密码不会显示。")
         )
@@ -49,11 +49,17 @@ class UserPage:
                     self.tr("启用") if user["enabled"] else self.tr("停用"),
                 ),
             )
-        app.button(self.tr("新增账户"), self.edit)
-        app.button(self.tr("修改选中账户 / 重置密码"), self.edit_selected)
-        app.button(self.tr("查看选中账户学习数据"), self.details)
-        app.button(self.tr("刷新列表"), self.show_list)
-        app.button(self.tr("返回首页"), app.home)
+        actions = ttk.Frame(app.body)
+        actions.pack(fill="x", pady=(12, 0))
+        for title, command, style in (
+            (self.tr("新增账户"), self.edit, "Accent.TButton"),
+            (self.tr("修改选中账户 / 重置密码"), self.edit_selected, "Tool.TButton"),
+            (self.tr("查看选中账户学习数据"), self.details, "Tool.TButton"),
+            (self.tr("刷新列表"), self.show_list, "Tool.TButton"),
+        ):
+            ttk.Button(actions, text=title, command=command, style=style).pack(
+                side="left", padx=(0, 8)
+            )
 
     def selected(self):
         selection = self.table.selection()
@@ -75,7 +81,11 @@ class UserPage:
         self.original = user
         self.editing = True
         app = self.app
-        app.clear(self.tr("修改账户") if user else self.tr("新增账户"))
+        app.clear(
+            self.tr("修改账户") if user else self.tr("新增账户"),
+            show_heading=False,
+            back=self.show_list,
+        )
         app.label(self.tr("修改用户名不会丢失学习记录。密码 6–16 位；编辑时留空表示保留原密码。"))
         self.name = tk.StringVar(value=user["name"] if user else "")
         self.password = tk.StringVar()
@@ -168,7 +178,11 @@ class UserPage:
             messagebox.showerror(self.tr("无法读取数据"), self.tr(str(exc)), parent=self.app.root)
             return
         app = self.app
-        app.clear(self.tr("学习数据：{0}", user["name"]))
+        app.clear(
+            self.tr("学习数据：{0}", user["name"]),
+            show_heading=False,
+            back=self.show_list,
+        )
         app.label(
             self.tr(
                 "完成练习：{0} 次；待复习错题：{1} 道。", len(data["history"]), len(data["wrong"])

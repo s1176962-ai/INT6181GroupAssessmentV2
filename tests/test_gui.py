@@ -26,6 +26,8 @@ class GuiTests(unittest.TestCase):
 
     def test_subject_cards_and_primary_action_positions(self):
         self.app.configure()
+        self.assertEqual(self.app.chrome.pack_slaves()[0], self.app.chrome_back)
+        self.assertEqual(self.app.chrome_back.winfo_manager(), "pack")
         self.assertEqual(
             {name for _, name in self.app._subject_cards}, {q.subject for q in self.app.questions}
         )
@@ -49,6 +51,14 @@ class GuiTests(unittest.TestCase):
         self.assertIn("1", self.app.start_button.cget("text"))
         self.app.start_button.invoke()
         self.assertEqual(len(self.app.engine.questions), 1)
+
+    def test_daily_practice_starts_directly_from_saved_filters(self):
+        self.app.learning_plan.set_settings("public", "English", "easy", 3)
+        self.app.start_daily_practice()
+        self.assertEqual(len(self.app.engine.questions), 3)
+        self.assertEqual(self.app._practice_bank_kind, "public")
+        self.assertEqual(self.app._last_filters["subject"], "English")
+        self.assertEqual(self.app._last_filters["difficulty"], "easy")
 
     def test_wheel_control_setting_and_persistence(self):
         from types import SimpleNamespace

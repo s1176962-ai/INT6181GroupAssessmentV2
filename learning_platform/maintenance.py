@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from .models import Question
+from .repositories import QuestionRepository
 from .storage import DataError, JsonStore
 
 
@@ -36,6 +37,30 @@ class QuestionEditor:
             for index, record in enumerate(records)
             if isinstance(record, dict) and record.get("id") == question_id
         ]
+
+    def all(self):
+        if self.authorize:
+            self.authorize()
+        return QuestionRepository(self.folder).all()
+
+    def merge(self, questions, reserved_ids=()):
+        files = self._records()
+        existing_ids = {
+            record.get("id")
+            for records in files.values()
+            for record in records
+            if isinstance(record, dict)
+        } | set(reserved_ids)
+        added = []
+        for question in questions:
+            if question.id not in existing_ids:
+                existing_ids.add(question.id)
+                added.append(question)
+        if added:
+            path = self.folder / "custom.json"
+            records = files.get(path, []) + [question.to_dict() for question in added]
+            self._commit(path, records)
+        return added
 
     def _commit(self, path: Path, records: list) -> None:
         # Backups live outside the scanned *.json directory to avoid duplicate IDs.

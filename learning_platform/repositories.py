@@ -120,18 +120,59 @@ class PersonalQuestionRepository:
             self.store.write([question.to_dict() for question in [*existing, *added]])
         return added
 
+    def save(self, question, original=None, reserved_ids=()):
+        questions = self.all()
+        ids = {item.id for item in questions} | set(reserved_ids)
+        if original is None:
+            if question.id in ids:
+                raise ValueError("题目 ID 已存在，请使用不同的 ID。")
+            questions.append(question)
+        else:
+            matches = [index for index, item in enumerate(questions) if item.id == original.id]
+            if question.id != original.id or len(matches) != 1:
+                raise ValueError("题目 ID 不可更改，且必须唯一。请刷新题库后重试。")
+            index = matches[0]
+            if questions[index] != original:
+                raise ValueError("该题已被其他操作修改，请返回列表刷新后重新编辑。")
+            questions[index] = question
+        self.store.write([item.to_dict() for item in questions])
+
+    def delete(self, original):
+        questions = self.all()
+        matches = [index for index, item in enumerate(questions) if item.id == original.id]
+        if len(matches) != 1 or questions[matches[0]] != original:
+            raise ValueError("题目不存在或已被修改，请刷新后重试。")
+        del questions[matches[0]]
+        self.store.write([item.to_dict() for item in questions])
+
 
 class LearningPlanRepository:
     DEFAULT_GOAL = 20
+    DEFAULT_SETTINGS = {
+        "bank_kind": "public",
+        "subject": None,
+        "difficulty": None,
+    }
 
     def __init__(self, path):
-        self.store = JsonStore(path, {"daily_goal": self.DEFAULT_GOAL, "answers": []})
+        self.store = JsonStore(
+            path,
+            {
+                "daily_goal": self.DEFAULT_GOAL,
+                "answers": [],
+                **self.DEFAULT_SETTINGS,
+            },
+        )
 
     def load(self):
         data = self.store.read()
         try:
-            if not isinstance(data, dict) or set(data) != {"daily_goal", "answers"}:
-                raise ValueError("必须包含 daily_goal 和 answers")
+            if not isinstance(data, dict):
+                raise ValueError("学习计划必须是对象")
+            required = {"daily_goal", "answers"}
+            allowed = required | set(self.DEFAULT_SETTINGS)
+            if not required.issubset(data) or not set(data).issubset(allowed):
+                raise ValueError("学习计划字段无效")
             if type(data["daily_goal"]) is not int or not 1 <= data["daily_goal"] <= 500:
                 raise ValueError("daily_goal 必须是 1–500 的整数")
             if not isinstance(data["answers"], list):
@@ -146,15 +187,41 @@ class LearningPlanRepository:
                 timestamp = datetime.fromisoformat(event["answered_at"])
                 if timestamp.tzinfo is None:
                     raise ValueError("答题时间必须包含时区")
+            bank_kind = data.get("bank_kind", "public")
+            if bank_kind not in {"public", "personal"}:
+                raise ValueError("bank_kind 必须是 public 或 personal")
+            for field in ("subject", "difficulty"):
+                value = data.get(field)
+                if value is not None and (not isinstance(value, str) or not value.strip()):
+                    raise ValueError(f"{field} 必须是非空字符串或 null")
         except (TypeError, ValueError) as exc:
             raise DataError(f"学习计划损坏，原文件已保留：{self.store.path}；{exc}") from exc
-        return data
+        return {**self.DEFAULT_SETTINGS, **data}
 
     def set_goal(self, goal):
         if type(goal) is not int or not 1 <= goal <= 500:
             raise ValueError("每日目标必须是 1–500 之间的整数。")
         data = self.load()
         data["daily_goal"] = goal
+        self.store.write(data)
+
+    def set_settings(self, bank_kind, subject, difficulty, goal):
+        if bank_kind not in {"public", "personal"}:
+            raise ValueError("题库设置无效。")
+        if type(goal) is not int or not 1 <= goal <= 500:
+            raise ValueError("每日目标必须是 1–500 之间的整数。")
+        for value in (subject, difficulty):
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError("科目和难度必须是有效文本。")
+        data = self.load()
+        data.update(
+            {
+                "bank_kind": bank_kind,
+                "subject": subject,
+                "difficulty": difficulty,
+                "daily_goal": goal,
+            }
+        )
         self.store.write(data)
 
     def record_answer(self, event_id, answered_at=None):
@@ -190,6 +257,9 @@ class LearningPlanRepository:
         answered = counts.get(today, 0)
         return {
             "daily_goal": data["daily_goal"],
+            "bank_kind": data["bank_kind"],
+            "subject": data["subject"],
+            "difficulty": data["difficulty"],
             "today": answered,
             "remaining": max(data["daily_goal"] - answered, 0),
             "percent": min(answered / data["daily_goal"] * 100, 100),

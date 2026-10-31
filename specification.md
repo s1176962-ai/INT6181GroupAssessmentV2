@@ -69,6 +69,20 @@ The system shall validate question data and handle missing files or invalid ques
 
 Administrators shall be able to add, edit, preview, and remove questions through a graphical maintenance page. Direct JSON maintenance remains supported.
 
+Public questions shall be readable by all users and maintainable only by administrators. Personal questions shall be stored under the current account UUID and shall not be visible to another account. Public and personal banks shall remain separate practice sources.
+
+Authenticated administrators and students shall use one question-bank centre. Administrators may switch between public and personal banks; students may only manage their own personal bank. Personal-bank management shall support listing, searching, creating, editing, deleting, image attachment and preview-first JSON/CSV import. Guests shall not see question-bank or user-management navigation, and students shall not see user management.
+
+The supplied JSON and CSV templates shall be covered by automated import tests. Administrators shall be able to import those formats into the public bank through the same validation, preview, duplicate-protection and confirmation workflow used by personal imports. Wrong-question CSV exports shall contain a complete importable single-choice question structure while retaining mistake metadata. Legacy wrong-question CSV rows with a correct answer and a different last answer should be accepted as two-option review questions.
+
+All main pages except the home page shall provide a consistent back action at the left of the top title. Child forms and imports shall return to their owning list; top-level sections shall return home.
+
+### FR-03A: Daily Learning Plan
+
+The home page shall present progress and daily-plan settings in one card. The card shall show the selected question bank, subject and difficulty, and provide a compact settings action. Users shall be able to select a public or personal bank, a subject or random subjects, a difficulty or all difficulties, and a daily quantity from 1 to 500.
+
+Continuing the daily practice shall directly select random matching questions for the remaining daily quantity. The application shall explain when the selected bank is empty or no questions match. Existing learning-plan files containing only `daily_goal` and `answers` shall remain readable without losing answer events.
+
 ### FR-04: Quiz Interface
 The system shall:
 - Display the current question and its answer options.

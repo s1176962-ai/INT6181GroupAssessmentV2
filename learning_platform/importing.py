@@ -48,8 +48,16 @@ class QuestionImportService:
             key: (value.strip() if isinstance(value, str) else value)
             for key, value in record.items()
         }
+        raw_options = converted.get("options", "")
+        if not raw_options and converted.get("answer") and converted.get("last_answer"):
+            raw_options = json.dumps(
+                list(dict.fromkeys([converted["answer"], converted["last_answer"]]))
+            )
+            converted.setdefault("topic", "Imported mistakes")
+            converted.setdefault("difficulty", "review")
+            converted.setdefault("type", "single_choice")
         try:
-            converted["options"] = json.loads(converted.get("options", ""))
+            converted["options"] = json.loads(raw_options)
         except (TypeError, json.JSONDecodeError) as exc:
             raise ValueError('options 必须是 JSON 数组，例如 ["A", "B"]') from exc
         option_images = converted.get("option_images", "")
@@ -103,7 +111,7 @@ class QuestionImportService:
                 fingerprint = self._fingerprint(question)
                 if question.id in ids:
                     status, message = "duplicate", "题目 ID 已存在，已安全跳过。"
-                elif fingerprint in fingerprints:
+                elif fingerprint in fingerprints and record.get("import_source") != "wrong_export":
                     status, message = "duplicate", "题目内容已存在，已安全跳过。"
                 else:
                     ids.add(question.id)

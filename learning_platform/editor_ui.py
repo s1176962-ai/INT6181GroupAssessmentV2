@@ -9,25 +9,65 @@ from uuid import uuid4
 from .maintenance import QuestionEditor, import_image
 from .models import Question, option_label
 from .services import image_path
+from .ui_tokens import BG, FONT, TEXT
 
 
 class EditorPage:
     """Use the application's scrollable content area without a second UI toolkit."""
 
-    def __init__(self, app):
+    def __init__(self, app, mode=None):
         self.app = app
         self.tr = app.tr
-        self.repository = QuestionEditor(app.bank.folder, lambda: app.auth.require_admin(app.user))
+        self.mode = mode or ("public" if app.user and app.user["role"] == "admin" else "personal")
+        self.repository = None
         self.editing = False
 
     def show_list(self):
-        if not self.app.check_admin():
+        if not self.app.user or not self.app.check_session():
             return
+        if self.mode == "public" and self.app.user["role"] != "admin":
+            self.mode = "personal"
         self.editing = False
         app = self.app
         app.load_bank()
-        app.clear(self.tr("题库管理"))
-        app.label(self.tr("题库在本机账户间共享。新增、编辑或删除后立即生效；修改前自动备份。"))
+        self.questions = app.public_questions if self.mode == "public" else app.personal_questions
+        self.repository = (
+            QuestionEditor(app.bank.folder, lambda: app.auth.require_admin(app.user))
+            if self.mode == "public"
+            else app.personal_bank
+        )
+        app._nav_key = "questions"
+        app.clear(self.tr("题库中心"), show_heading=False, back=app.home)
+        heading = tk.Frame(app.body, bg=BG)
+        heading.pack(fill="x", pady=(0, 10))
+        tk.Label(
+            heading,
+            text=self.tr("公共题库") if self.mode == "public" else self.tr("个人题库"),
+            bg=BG,
+            fg=TEXT,
+            font=(FONT, 20, "bold"),
+        ).pack(side="left")
+        switcher = ttk.Frame(heading)
+        switcher.pack(side="right")
+        if app.user["role"] == "admin":
+            ttk.Button(
+                switcher,
+                text=self.tr("公共题库"),
+                command=lambda: self.switch_mode("public"),
+                style="Accent.TButton" if self.mode == "public" else "Tool.TButton",
+            ).pack(side="left", padx=3)
+        ttk.Button(
+            switcher,
+            text=self.tr("个人题库"),
+            command=lambda: self.switch_mode("personal"),
+            style="Accent.TButton" if self.mode == "personal" else "Tool.TButton",
+        ).pack(side="left", padx=3)
+        description = (
+            "公共题库对所有人可见，仅管理员可以维护。"
+            if self.mode == "public"
+            else "个人题库仅当前账户可见，可以新增、编辑、删除或批量导入。"
+        )
+        app.label(self.tr(description), "Muted.TLabel")
         bar = ttk.Frame(app.body)
         bar.pack(fill="x", pady=8)
         self.search = tk.StringVar()
@@ -38,20 +78,19 @@ class EditorPage:
             textvariable=self.subject,
             state="readonly",
             width=18,
-            values=[self.tr("全部")] + sorted({q.subject for q in app.questions}),
+            values=[self.tr("全部")] + sorted({q.subject for q in self.questions}),
         ).pack(side="left", padx=4)
         ttk.Button(bar, text=self.tr("搜索 / 筛选"), command=self.refresh_list).pack(
             side="left", padx=4
         )
-        app.label(self.tr("搜索 ID、题干或主题；选中一行后编辑或删除。"))
         table_frame = ttk.Frame(app.body)
-        table_frame.pack(fill="x")
+        table_frame.pack(fill="both", expand=True)
         table_frame.columnconfigure(0, weight=1)
         self.table = ttk.Treeview(
             table_frame,
             columns=("id", "subject", "topic", "difficulty", "text"),
             show="headings",
-            height=12,
+            height=10,
             selectmode="browse",
         )
         for column, title, width in [
@@ -73,23 +112,35 @@ class EditorPage:
         self.summary = app.label("")
         actions = ttk.Frame(app.body)
         actions.pack(fill="x", pady=8)
-        for title, callback in [
+        action_data = [
             (self.tr("新增题目"), self.edit),
             (self.tr("编辑选中题目"), self.edit_selected),
             (self.tr("删除选中题目"), self.delete_selected),
-            (self.tr("返回首页"), app.home),
-        ]:
+        ]
+        if self.mode == "personal" or app.user["role"] == "admin":
+            action_data.append(
+                (
+                    self.tr("批量导入 JSON / CSV"),
+                    lambda mode=self.mode: app.personal_bank_page(mode),
+                )
+            )
+        for title, callback in action_data:
             ttk.Button(actions, text=title, command=callback).pack(side="left", padx=4)
-        if app.bank.warnings:
+        ttk.Button(actions, text=self.tr("返回首页"), command=app.home).pack(side="right", padx=4)
+        if self.mode == "public" and app.bank.warnings:
             app.label(self.tr("题库诊断：\n") + "\n".join(app.bank.warnings))
         self.refresh_list()
+
+    def switch_mode(self, mode):
+        self.mode = mode
+        self.show_list()
 
     def refresh_list(self):
         self.table.delete(*self.table.get_children())
         term = self.search.get().strip().casefold()
         matches = [
             q
-            for q in self.app.questions
+            for q in self.questions
             if (self.subject.get() == self.tr("全部") or q.subject == self.subject.get())
             and term in f"{q.id} {q.question} {q.topic}".casefold()
         ]
@@ -98,7 +149,7 @@ class EditorPage:
                 "", "end", iid=q.id, values=(q.id, q.subject, q.topic, q.difficulty, q.question)
             )
         self.summary.configure(
-            text=self.tr("显示 {0} / {1} 道题", len(matches), len(self.app.questions))
+            text=self.tr("显示 {0} / {1} 道题", len(matches), len(self.questions))
         )
 
     def selected(self):
@@ -108,7 +159,7 @@ class EditorPage:
                 self.tr("请选择题目"), self.tr("先在列表中选中一道题。"), parent=self.app.root
             )
             return None
-        return self.app.by_id[selection[0]]
+        return next((q for q in self.questions if q.id == selection[0]), None)
 
     def edit_selected(self):
         question = self.selected()
@@ -117,9 +168,16 @@ class EditorPage:
 
     def delete_selected(self):
         question = self.selected()
+        prompt = (
+            self.tr("确定删除 {0}？\n原题库将备份，已有错题记录保留。", question.id)
+            if question and self.mode == "public"
+            else self.tr("确定从个人题库删除 {0}？已有错题记录仍会保留。", question.id)
+            if question
+            else ""
+        )
         if question and messagebox.askyesno(
             self.tr("删除题目"),
-            self.tr("确定删除 {0}？\n原题库将备份，已有错题记录保留。", question.id),
+            prompt,
             parent=self.app.root,
         ):
             try:
@@ -130,13 +188,17 @@ class EditorPage:
             self.show_list()
 
     def edit(self, question=None):
-        if not self.app.check_admin():
+        if not self.authorized():
             return
         app = self.app
         self.original = question
         self.editing = True
         self.rows = []
-        app.clear(self.tr("编辑题目") if question else self.tr("新增题目"))
+        app.clear(
+            self.tr("编辑题目") if question else self.tr("新增题目"),
+            show_heading=False,
+            back=self.show_list,
+        )
         app.label(self.tr("带 * 为必填。题干和选项可分别附图；选择一个正确选项，然后预览或保存。"))
         data = (
             asdict(question)
@@ -162,7 +224,7 @@ class EditorPage:
             app.label(title)
             var = tk.StringVar(value=data[key])
             self.fields[key] = var
-            choices = sorted({getattr(q, key) for q in app.questions}) if key != "id" else []
+            choices = sorted({getattr(q, key) for q in self.questions}) if key != "id" else []
             entry = ttk.Combobox(app.body, textvariable=var, values=choices, width=42)
             if key == "id" and question:
                 entry.state(["disabled"])
@@ -238,7 +300,7 @@ class EditorPage:
         )
 
     def upload(self, variable):
-        if not self.app.check_admin():
+        if not self.authorized():
             return
         source = filedialog.askopenfilename(
             parent=self.app.root,
@@ -354,7 +416,15 @@ class EditorPage:
 
     def save(self):
         try:
-            self.repository.save(self.build_question(), self.original)
+            question = self.build_question()
+            if self.mode == "personal":
+                self.repository.save(
+                    question,
+                    self.original,
+                    reserved_ids={item.id for item in self.app.public_questions},
+                )
+            else:
+                self.repository.save(question, self.original)
         except ValueError as exc:
             messagebox.showerror(self.tr("保存失败"), self.tr(str(exc)), parent=self.app.root)
             return
@@ -363,3 +433,8 @@ class EditorPage:
         messagebox.showinfo(
             self.tr("保存成功"), self.tr("题库已更新，可以返回首页开始练习。"), parent=self.app.root
         )
+
+    def authorized(self):
+        if not self.app.user:
+            return False
+        return self.app.check_admin() if self.mode == "public" else self.app.check_session()

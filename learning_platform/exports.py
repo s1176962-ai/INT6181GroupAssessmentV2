@@ -2,6 +2,7 @@
 
 import csv
 import io
+import json
 import os
 import tempfile
 
@@ -24,26 +25,40 @@ def rows_for(kind, data, bank):
     keys = [
         "id",
         "subject",
+        "topic",
+        "difficulty",
+        "type",
         "question",
+        "options",
+        "question_image",
+        "option_images",
         "last_answer",
         "answer",
         "explanation",
         "count",
         "last_seen",
+        "import_source",
     ]
     rows = []
     for qid, record in data["wrong"].items():
         q = bank.get(qid)
         rows.append(
             [
-                qid,
+                f"WRONG-{qid}",
                 q.subject if q else "",
+                q.topic if q else "Imported mistakes",
+                q.difficulty if q else "review",
+                q.type if q else "single_choice",
                 q.question if q else "[Deleted question]",
+                json.dumps(q.options, ensure_ascii=False) if q else "[]",
+                q.question_image if q and q.question_image else "",
+                json.dumps(q.option_images, ensure_ascii=False) if q and q.option_images else "",
                 record.get("last_answer", ""),
                 q.answer if q else "",
                 q.explanation if q else "",
                 record.get("count", 0),
                 record.get("last_seen", ""),
+                "wrong_export",
             ]
         )
     return keys, rows

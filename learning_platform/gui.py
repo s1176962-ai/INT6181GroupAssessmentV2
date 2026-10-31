@@ -6,7 +6,7 @@ import time
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from .auth import AuthService
 from .display import DisplaySettings, window_size
@@ -14,6 +14,7 @@ from .editor_ui import EditorPage
 from .i18n import Translator
 from .importing import QuestionImportService
 from .login_preferences import LoginPreferences
+from .maintenance import QuestionEditor
 from .models import option_label
 from .motion import Motion
 from .repositories import (
@@ -135,6 +136,13 @@ class Application:
         root.bind("<Destroy>", self._on_root_destroy, add="+")
         self._style(root)
         self.chrome = ttk.Frame(root, style="Shell.TFrame", padding=(20, 14))
+        self.chrome_back = ttk.Button(
+            self.chrome,
+            text="←",
+            command=self.home,
+            style="Tool.TButton",
+            width=3,
+        )
         self.chrome_title = ttk.Label(self.chrome, text=self.tr("首页"), style="Shell.TLabel")
         self.chrome_title.pack(side="left")
         self.timer_label = ttk.Label(self.chrome, text="", style="Shell.TLabel")
@@ -494,14 +502,17 @@ class Application:
             font=(FONT, 15, "bold"),
         ).pack(anchor="w", padx=28, pady=(24, 24))
         self._nav_buttons = {}
-        items = (
+        items = [
             ("home", "⌂", "首页", self.home),
             ("practice", "▷", "开始练习", self.configure),
-            ("personal", "▤", "导入题库", self.personal_bank_page),
             ("notebook", "▣", "错题本与复习", self.notebook),
             ("history", "▥", "学习统计与历史", self.history),
             ("settings", "⚙", "设置 / 语言", self.settings),
-        )
+        ]
+        if self.user:
+            items.insert(2, ("questions", "▤", "题库管理", self.manage_questions))
+            if self.user["role"] == "admin":
+                items.insert(3, ("users", "♙", "用户管理", self.manage_users))
         for key, icon, caption, command in items:
             button = tk.Label(
                 self.nav,
@@ -567,6 +578,16 @@ class Application:
         button.configure(bg=HOVER if entering else "#0D1014")
 
     def _paint_nav(self):
+        expected = {"home", "practice", "notebook", "history", "settings"}
+        if self.user:
+            expected.add("questions")
+            if self.user["role"] == "admin":
+                expected.add("users")
+        if getattr(self, "_nav_buttons", None) and set(self._nav_buttons) != expected:
+            self.nav.destroy()
+            self.nav = None
+            self._ensure_nav()
+            return
         current = getattr(self, "_nav_key", None)
         for key, button in getattr(self, "_nav_buttons", {}).items():
             if not button.winfo_exists():
@@ -1294,8 +1315,14 @@ class Application:
         self.login_page()
 
     def manage_questions(self):
-        if not self.check_admin():
+        if not self.user or not self.check_session():
+            messagebox.showinfo(
+                self.tr("权限提示"),
+                self.tr("请先登录账户，再管理个人题库。"),
+                parent=self.root,
+            )
             return
+        self._nav_key = "questions"
         self.editor = EditorPage(self)
         self.editor.show_list()
 
@@ -1328,12 +1355,13 @@ class Application:
 
     def manage_users(self):
         if self.check_admin():
+            self._nav_key = "users"
             self.users_page = UserPage(self)
             self.users_page.show_list()
 
     def settings(self):
         self._nav_key = "settings"
-        self.clear(self.tr("设置"))
+        self.clear(self.tr("设置"), show_heading=False)
         card = ttk.LabelFrame(self.body, text=self.tr("界面语言"), padding=16)
         card.pack(fill="x", pady=8)
         self.language = tk.StringVar(value=self.tr.language)
@@ -1452,7 +1480,7 @@ class Application:
         self.action_dock.pack(side="bottom", fill="x", before=self.canvas)
         return self.action_dock
 
-    def clear(self, title, heading=True, show_heading=True):
+    def clear(self, title, heading=True, show_heading=True, back=None):
         if self._login_after:
             self.root.after_cancel(self._login_after)
             self._login_after = None
@@ -1475,6 +1503,14 @@ class Application:
             self._set_chrome(True)
             self.body.configure(padding=(24, 20))
         self.chrome_title.configure(text=title)
+        back_action = (
+            back if back is not None else (None if title == self.tr("首页") else self.home)
+        )
+        if heading and back_action:
+            self.chrome_back.configure(command=back_action)
+            self.chrome_back.pack(side="left", before=self.chrome_title, padx=(0, 10))
+        else:
+            self.chrome_back.pack_forget()
         if self.user:
             self.chrome_user.configure(text=self.user["name"])
         elif self.signed_in:
@@ -2039,6 +2075,9 @@ class Application:
         except DataError as exc:
             plan = {
                 "daily_goal": 20,
+                "bank_kind": "public",
+                "subject": None,
+                "difficulty": None,
                 "today": 0,
                 "remaining": 20,
                 "percent": 0,
@@ -2051,13 +2090,40 @@ class Application:
         top.pack(fill="x")
         goal = card_frame(top, pad=20)
         goal.pack(side="left", fill="both", expand=True, padx=(0, 12))
+        goal_heading = tk.Frame(goal, bg=SURFACE)
+        goal_heading.pack(fill="x")
         tk.Label(
-            goal,
+            goal_heading,
             text=self.tr("今日目标"),
             bg=SURFACE,
             fg=TEXT,
             font=(FONT, 15, "bold"),
-        ).pack(anchor="w")
+        ).pack(side="left")
+        tk.Button(
+            goal_heading,
+            text="🔧",
+            command=self.open_daily_plan_settings,
+            bg=SURFACE,
+            fg=MUTED,
+            activebackground=HOVER,
+            activeforeground=PRIMARY,
+            relief="flat",
+            bd=0,
+            font=(FONT, 13),
+            cursor="hand2",
+            padx=7,
+            pady=2,
+        ).pack(side="right")
+        bank_name = self.tr("个人题库") if plan["bank_kind"] == "personal" else self.tr("公共题库")
+        subject_name = plan["subject"] or self.tr("随机科目")
+        difficulty_name = plan["difficulty"] or self.tr("全部难度")
+        tk.Label(
+            goal,
+            text=f"{bank_name} · {subject_name} · {difficulty_name}",
+            bg=SURFACE,
+            fg=MUTED,
+            font=TYPE_HINT,
+        ).pack(anchor="w", pady=(4, 0))
         score = tk.Frame(goal, bg=SURFACE)
         score.pack(anchor="w", pady=(16, 2))
         tk.Label(
@@ -2101,7 +2167,7 @@ class Application:
         self._mock_action(
             goal,
             self.tr("继续今日练习"),
-            lambda: self.configure(bank_kind="public"),
+            self.start_daily_practice,
             True,
             padx=24,
             pady=12,
@@ -2141,40 +2207,6 @@ class Application:
                 fg=SUCCESS_FG if done else PRIMARY if index == len(day_names) - 1 else MUTED,
                 font=(FONT, 15),
             ).pack()
-
-        setting = card_frame(side, pad=18)
-        setting.pack(fill="x")
-        tk.Label(
-            setting,
-            text=self.tr("设置每日目标"),
-            bg=SURFACE,
-            fg=TEXT,
-            font=(FONT, 14, "bold"),
-        ).pack(anchor="w")
-        goal_row = tk.Frame(setting, bg=SURFACE)
-        goal_row.pack(fill="x", pady=(10, 0))
-        goal_value = tk.Label(
-            goal_row,
-            text=str(plan["daily_goal"]),
-            bg=HOVER,
-            fg=TEXT,
-            font=(FONT, 14),
-            padx=18,
-            pady=8,
-            highlightthickness=1,
-            highlightbackground=BORDER,
-        )
-        goal_value.pack(side="left")
-        tk.Label(
-            goal_row,
-            text=self.tr("题 / 天"),
-            bg=SURFACE,
-            fg=TEXT,
-            font=TYPE_BODY,
-        ).pack(side="left", padx=12)
-        self._mock_action(
-            goal_row, self.tr("调整"), self.set_daily_goal, False, padx=12, pady=8
-        ).pack(side="right")
 
         recent = card_frame(self.body, pad=18)
         recent.pack(fill="x", pady=(14, 0))
@@ -2234,32 +2266,170 @@ class Application:
                 fg=ERROR,
                 font=TYPE_HINT,
             ).pack(anchor="w", pady=(8, 0))
-        if self.user and self.user["role"] == "admin":
-            admin = tk.Frame(self.body, bg=BG)
-            admin.pack(fill="x", pady=(12, 0))
-            self._mock_action(
-                admin, self.tr("题库管理 / 上传图片"), self.manage_questions, False
-            ).pack(side="left", padx=(0, 8))
-            self._mock_action(admin, self.tr("用户管理"), self.manage_users, False).pack(
-                side="left"
-            )
 
     def set_daily_goal(self):
+        self.open_daily_plan_settings()
+
+    def open_daily_plan_settings(self):
         try:
-            current = self.learning_plan.load()["daily_goal"]
-            goal = simpledialog.askinteger(
-                self.tr("每日目标"),
-                self.tr("请输入每天计划完成的题数（1–500）："),
-                initialvalue=current,
-                minvalue=1,
-                maxvalue=500,
+            plan = self.learning_plan.load()
+            self.load_bank()
+        except (DataError, ValueError) as exc:
+            messagebox.showerror(self.tr("无法打开设置"), self.tr(str(exc)), parent=self.root)
+            return
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title(self.tr("调整每日目标"))
+        dialog.configure(bg=BG)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+        host = card_frame(dialog, pad=22)
+        host.pack(fill="both", expand=True, padx=18, pady=18)
+        tk.Label(
+            host,
+            text=self.tr("调整每日目标"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 17, "bold"),
+        ).pack(anchor="w", pady=(0, 14))
+
+        public_label = self.tr("公共题库")
+        personal_label = self.tr("个人题库")
+        available_banks = [public_label] + ([personal_label] if self.user else [])
+        bank_var = tk.StringVar(
+            value=(
+                personal_label if self.user and plan["bank_kind"] == "personal" else public_label
+            )
+        )
+        subject_var = tk.StringVar()
+        difficulty_var = tk.StringVar()
+        goal_var = tk.StringVar(value=str(plan["daily_goal"]))
+
+        def field(label, variable, values):
+            tk.Label(host, text=label, bg=SURFACE, fg=TEXT, font=TYPE_BODY).pack(
+                anchor="w", pady=(8, 4)
+            )
+            box = ttk.Combobox(
+                host, textvariable=variable, values=values, state="readonly", width=36
+            )
+            box.pack(fill="x")
+            return box
+
+        bank_box = field(self.tr("题库"), bank_var, available_banks)
+        subject_box = field(self.tr("科目"), subject_var, [])
+        difficulty_box = field(self.tr("难度"), difficulty_var, [])
+        tk.Label(host, text=self.tr("每日题量"), bg=SURFACE, fg=TEXT, font=TYPE_BODY).pack(
+            anchor="w", pady=(8, 4)
+        )
+        ttk.Spinbox(host, from_=1, to=500, textvariable=goal_var, width=36).pack(fill="x")
+
+        random_subject = self.tr("随机科目")
+        all_difficulties = self.tr("全部难度")
+
+        def selected_questions():
+            return (
+                self.personal_questions
+                if bank_var.get() == personal_label
+                else self.public_questions
+            )
+
+        def refresh_difficulties(_event=None, preferred=None):
+            questions = selected_questions()
+            subject = None if subject_var.get() == random_subject else subject_var.get()
+            values = [all_difficulties] + sorted(
+                {q.difficulty for q in questions if subject is None or q.subject == subject}
+            )
+            difficulty_box["values"] = values
+            wanted = preferred if preferred in values else all_difficulties
+            difficulty_var.set(wanted)
+
+        def refresh_subjects(_event=None, preferred_subject=None, preferred_difficulty=None):
+            values = [random_subject] + sorted({q.subject for q in selected_questions()})
+            subject_box["values"] = values
+            wanted = preferred_subject if preferred_subject in values else random_subject
+            subject_var.set(wanted)
+            refresh_difficulties(preferred=preferred_difficulty)
+
+        bank_box.bind("<<ComboboxSelected>>", refresh_subjects)
+        subject_box.bind("<<ComboboxSelected>>", refresh_difficulties)
+        refresh_subjects(
+            preferred_subject=plan["subject"] or random_subject,
+            preferred_difficulty=plan["difficulty"] or all_difficulties,
+        )
+
+        actions = tk.Frame(host, bg=SURFACE)
+        actions.pack(fill="x", pady=(20, 0))
+
+        def save():
+            try:
+                goal = int(goal_var.get())
+                self.learning_plan.set_settings(
+                    "personal" if bank_var.get() == personal_label else "public",
+                    None if subject_var.get() == random_subject else subject_var.get(),
+                    None if difficulty_var.get() == all_difficulties else difficulty_var.get(),
+                    goal,
+                )
+            except (DataError, ValueError) as exc:
+                messagebox.showerror(self.tr("保存失败"), self.tr(str(exc)), parent=dialog)
+                return
+            dialog.destroy()
+            self.home()
+
+        ttk.Button(actions, text=self.tr("保存设置"), command=save, style="Accent.TButton").pack(
+            side="left"
+        )
+        ttk.Button(
+            actions, text=self.tr("取消"), command=dialog.destroy, style="Tool.TButton"
+        ).pack(side="right")
+        dialog.update_idletasks()
+        x = self.root.winfo_rootx() + max((self.root.winfo_width() - dialog.winfo_width()) // 2, 0)
+        y = self.root.winfo_rooty() + max(
+            (self.root.winfo_height() - dialog.winfo_height()) // 2, 0
+        )
+        dialog.geometry(f"+{x}+{y}")
+
+    def start_daily_practice(self):
+        try:
+            plan = self.learning_plan.summary()
+            if plan["bank_kind"] == "personal" and not self.user:
+                raise ValueError(self.tr("请先登录账户，再导入或使用个人题库。"))
+            if plan["remaining"] <= 0:
+                messagebox.showinfo(
+                    self.tr("今日目标"),
+                    self.tr("今天的目标已经完成，明天继续保持！"),
+                    parent=self.root,
+                )
+                return
+            self.load_bank()
+            questions = (
+                self.personal_questions
+                if plan["bank_kind"] == "personal"
+                else self.public_questions
+            )
+            selected = select_questions(
+                questions,
+                subject=plan["subject"],
+                difficulty=plan["difficulty"],
+                count=plan["remaining"],
+            )
+        except (DataError, ValueError) as exc:
+            messagebox.showerror(
+                self.tr("无法开始练习"),
+                self.tr("每日目标没有匹配题目，请点击扳手调整设置。\n{0}", exc),
                 parent=self.root,
             )
-            if goal is not None:
-                self.learning_plan.set_goal(goal)
-                self.home()
-        except (DataError, ValueError) as exc:
-            messagebox.showerror(self.tr("保存失败"), self.tr(str(exc)), parent=self.root)
+            return
+        self.questions = questions
+        self._practice_bank_kind = plan["bank_kind"]
+        self._last_filters = {
+            "subject": plan["subject"],
+            "topic": None,
+            "difficulty": plan["difficulty"],
+            "count": plan["remaining"],
+            "bank_kind": plan["bank_kind"],
+        }
+        self.start_quiz(selected)
 
     def _legacy_personal_bank_page(self):
         if not self.user:
@@ -2394,7 +2564,7 @@ class Application:
         self.import_confirm.pack(anchor="w", pady=(12, 4))
         self.import_confirm.state(["disabled"])
 
-    def personal_bank_page(self):
+    def personal_bank_page(self, bank_kind="personal"):
         """Import workflow matching the approved right-hand mock-up."""
         if not self.user:
             messagebox.showinfo(
@@ -2403,10 +2573,17 @@ class Application:
                 parent=self.root,
             )
             return
-        if not self.check_session():
+        if bank_kind == "public" and not self.check_admin():
             return
-        self._nav_key = "personal"
-        self.clear(self.tr("导入题库"), show_heading=False)
+        if bank_kind != "public" and not self.check_session():
+            return
+        self.import_bank_kind = bank_kind
+        self._nav_key = "questions"
+
+        def return_to_bank():
+            self._show_question_bank(bank_kind)
+
+        self.clear(self.tr("题库管理"), show_heading=False, back=return_to_bank)
         self.chrome.pack_forget()
         self.rule.pack_forget()
         self.body.configure(padding=(18, 18))
@@ -2415,7 +2592,7 @@ class Application:
 
         tk.Label(
             self.body,
-            text=self.tr("导入题库"),
+            text=self.tr("公共题库 · 批量导入" if bank_kind == "public" else "个人题库 · 批量导入"),
             bg=BG,
             fg=TEXT,
             font=(FONT, 24, "bold"),
@@ -2524,27 +2701,13 @@ class Application:
         permissions.pack(fill="x")
         tk.Label(
             permissions,
-            text=self.tr("导入后权限"),
-            bg=BG,
-            fg=TEXT,
-            font=(FONT, 13, "bold"),
-        ).pack(anchor="w")
-        option_row = tk.Frame(permissions, bg=BG)
-        option_row.pack(anchor="w", pady=(8, 0))
-        tk.Label(
-            option_row,
-            text="◉  " + self.tr("仅自己可用"),
-            bg=BG,
-            fg=TEXT,
-            font=TYPE_BODY,
-        ).pack(side="left")
-        tk.Label(
-            option_row,
-            text="○  " + self.tr("共享给本机所有账户（需管理员批准）"),
+            text=self.tr("导入到公共题库，仅管理员可执行。")
+            if bank_kind == "public"
+            else self.tr("导入到个人题库，仅当前账户可见。"),
             bg=BG,
             fg=MUTED,
             font=TYPE_BODY,
-        ).pack(side="left", padx=(24, 0))
+        ).pack(anchor="w")
 
         footer = tk.Frame(self.body, bg=BG)
         footer.pack(fill="x", pady=(18, 0))
@@ -2567,8 +2730,8 @@ class Application:
         self.import_confirm.pack(side="right")
         self._mock_action(
             footer,
-            self.tr("返回修改"),
-            self.choose_import_file,
+            self.tr("返回题库中心"),
+            return_to_bank,
             False,
             padx=14,
             pady=10,
@@ -2592,7 +2755,7 @@ class Application:
         if not path:
             return
         try:
-            preview = QuestionImportService(self.personal_bank, self.public_questions).preview(path)
+            preview = self._question_import_service().preview(path)
         except (DataError, ValueError) as exc:
             messagebox.showerror(self.tr("导入文件无效"), self.tr(str(exc)), parent=self.root)
             return
@@ -2642,14 +2805,17 @@ class Application:
             return
         if not messagebox.askyesno(
             self.tr("确认导入"),
-            self.tr("将 {0} 道有效题目加入当前账户的个人题库？", len(preview.valid)),
+            self.tr(
+                "将 {0} 道有效题目加入公共题库？"
+                if self.import_bank_kind == "public"
+                else "将 {0} 道有效题目加入当前账户的个人题库？",
+                len(preview.valid),
+            ),
             parent=self.root,
         ):
             return
         try:
-            added = QuestionImportService(self.personal_bank, self.public_questions).confirm(
-                preview
-            )
+            added = self._question_import_service().confirm(preview)
         except (DataError, ValueError) as exc:
             messagebox.showerror(self.tr("导入失败"), self.tr(str(exc)), parent=self.root)
             return
@@ -2658,7 +2824,19 @@ class Application:
             self.tr("已导入 {0} 道题；重复题目保持跳过。", len(added)),
             parent=self.root,
         )
-        self.personal_bank_page()
+        self.personal_bank_page(self.import_bank_kind)
+
+    def _show_question_bank(self, bank_kind):
+        self.editor = EditorPage(self, mode=bank_kind)
+        self.editor.show_list()
+
+    def _question_import_service(self):
+        if getattr(self, "import_bank_kind", "personal") == "public":
+            repository = QuestionEditor(
+                self.bank.folder, lambda: self.auth.require_admin(self.user)
+            )
+            return QuestionImportService(repository, [])
+        return QuestionImportService(self.personal_bank, self.public_questions)
 
     def _open_question_preview(self, question_id):
         question = self.by_id.get(question_id)
@@ -3420,7 +3598,7 @@ class Application:
     def results(self):
         result = self.engine.result()
         self.timer_label.configure(text="")
-        self.clear(self.tr("练习完成"), show_heading=True)
+        self.clear(self.tr("练习完成"), show_heading=False)
         if getattr(self.engine, "timed_out", False):
             self.label(
                 self.tr(
@@ -3536,7 +3714,7 @@ class Application:
         if not self.check_session():
             return
         self._nav_key = "notebook"
-        self.clear(self.tr("错题本"), show_heading=True)
+        self.clear(self.tr("错题本"), show_heading=False)
         self.export_buttons("wrong")
         try:
             wrong = self.progress.load()["wrong"]
@@ -3670,7 +3848,7 @@ class Application:
         if not self.check_session():
             return
         self._nav_key = "history"
-        self.clear(self.tr("学习统计与历史"))
+        self.clear(self.tr("学习统计与历史"), show_heading=False)
         self.button(self.tr("返回首页"), self.home)
         self.export_buttons("history")
         try:
