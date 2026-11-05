@@ -154,6 +154,35 @@ class CoreTests(unittest.TestCase):
         self.assertIn(self.q.id, self.progress.load()["wrong"])
         self.assertEqual(self.progress.load()["history"], [])
 
+    def test_timeout_saves_partial_score_without_marking_unanswered_wrong(self):
+        quiz = QuizEngine(self.questions[:2], self.progress)
+        quiz.submit(quiz.current.answer)
+
+        quiz.finish_timeout()
+
+        self.assertTrue(quiz.complete)
+        self.assertTrue(quiz.timed_out)
+        self.assertEqual(quiz.unanswered, 1)
+        self.assertEqual(
+            quiz.result(),
+            {
+                "total": 2,
+                "correct": 1,
+                "incorrect": 1,
+                "accuracy": 50.0,
+                "score": 1,
+                "max_score": 2,
+            },
+        )
+        data = self.progress.load()
+        self.assertEqual(data["wrong"], {})
+        self.assertEqual(len(data["history"]), 1)
+        self.assertTrue(data["history"][0]["timed_out"])
+        self.assertEqual(data["history"][0]["unanswered"], 1)
+
+        quiz.finish_timeout()
+        self.assertEqual(len(self.progress.load()["history"]), 1)
+
     def test_missing_progress_and_independent_defaults(self):
         self.assertEqual(self.progress.load(), {"wrong": {}, "history": []})
         data = self.progress.load()

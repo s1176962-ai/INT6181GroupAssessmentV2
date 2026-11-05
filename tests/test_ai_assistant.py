@@ -71,6 +71,34 @@ class AiAssistantTests(unittest.TestCase):
         payload = json.loads(request.data.decode("utf-8"))
         self.assertEqual(payload["max_tokens"], 320)
         self.assertEqual(payload["messages"][0]["content"], SYSTEM_PROMPT)
+        self.assertEqual(request.get_header("Authorization"), "Bearer secret")
+        self.assertEqual(call.call_args.kwargs["timeout"], 30)
+
+    def test_input_and_configuration_validation_happen_before_network_request(self):
+        settings = MagicMock()
+        assistant = AiAssistant(settings)
+        with patch("learning_platform.ai_assistant.urllib.request.urlopen") as urlopen:
+            for message in ("  ", "x" * (AiAssistant.MAX_INPUT_CHARS + 1)):
+                with self.subTest(message_length=len(message)), self.assertRaises(ValueError):
+                    assistant.ask(message)
+            settings.load.assert_not_called()
+            urlopen.assert_not_called()
+
+            settings.load.return_value = {
+                "endpoint": "https://api.deepseek.com/chat/completions",
+                "model": "deepseek-chat",
+                "api_key": "",
+            }
+            with self.assertRaisesRegex(ValueError, "API Key"):
+                assistant.ask("Please explain this question.")
+            urlopen.assert_not_called()
+
+    def test_settings_reject_insecure_endpoint_and_empty_model(self):
+        settings = AiSettings(self.folder)
+        with self.assertRaises(ValueError):
+            settings.save("http://example.test", "model", "secret")
+        with self.assertRaises(ValueError):
+            settings.save("https://example.test", "  ", "secret")
 
 
 if __name__ == "__main__":
