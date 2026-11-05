@@ -7,7 +7,7 @@ import urllib.request
 from .login_preferences import _protect, _unprotect
 from .storage import DataError, JsonStore
 
-SYSTEM_PROMPT = """你是“问问 AI”，一名耐心、简洁的学习问答小助手。
+SYSTEM_PROMPT = """你是“大肥鱼 AI”，一名耐心、简洁的学习问答小助手。
 你的任务是帮助学生理解知识，而不是替学生完成作业。
 
 规则：
