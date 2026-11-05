@@ -404,5 +404,20 @@
   "个人题库 · 批量导入": "Personal bank · Import",
   "导入到公共题库，仅管理员可执行。": "Import into the public bank. Administrators only.",
   "导入到个人题库，仅当前账户可见。": "Import into the personal bank. Visible only to this account.",
-  "将 {0} 道有效题目加入公共题库？": "Add {0} valid questions to the public bank?"
+  "将 {0} 道有效题目加入公共题库？": "Add {0} valid questions to the public bank?",
+  "请输入你的学习问题……": "Enter your study question…",
+  "问问 AI 设置": "Ask AI settings",
+  "API 地址": "API endpoint",
+  "模型": "Model",
+  "DeepSeek API Key（留空表示不修改）": "DeepSeek API Key (leave blank to keep it)",
+  "API Key 使用当前系统账户加密保存，不会写入代码或提交到 Git。": "The API Key is encrypted for the current system account and is never written into source code or committed to Git.",
+  "保存 AI 设置": "Save AI settings",
+  "AI 设置已保存。": "AI settings saved.",
+  "问问 AI": "Ask AI",
+  "输入一个学习问题，AI 会给出简短提示。": "Ask a study question and receive a concise hint.",
+  "发送": "Send",
+  "请输入想问的问题。": "Enter a question first.",
+  "AI 思考中…": "AI is thinking…",
+  "正在连接 AI 服务…": "Connecting to the AI service…",
+  "本题已询问": "Asked for this question"
 }

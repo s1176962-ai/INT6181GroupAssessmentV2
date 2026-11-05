@@ -13,6 +13,7 @@ data/backups/
 data/account_backups/
 data/settings.json
 data/login_state.json
+data/ai_settings.json
 .tmp-*
 
 data/display.json

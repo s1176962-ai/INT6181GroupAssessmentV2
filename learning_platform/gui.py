@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from .ai_assistant import AiAssistant, AiSettings, question_message
 from .auth import AuthService
 from .display import DisplaySettings, window_size
 from .editor_ui import EditorPage
@@ -94,6 +95,26 @@ SPACE_LG = SPACE_5
 SPACE_XL = SPACE_6
 
 
+class AssistantReply(tk.Text):
+    """Read-only scrolling reply with the same update interface as a label."""
+
+    def __init__(self, parent, **kwargs):
+        text = kwargs.pop("text", "")
+        super().__init__(parent, **kwargs)
+        self.configure(text=text)
+
+    def configure(self, cnf=None, **kwargs):
+        text = kwargs.pop("text", None)
+        result = super().configure(cnf, **kwargs)
+        if text is not None:
+            super().configure(state="normal")
+            self.delete("1.0", "end")
+            self.insert("1.0", text)
+            self.yview_moveto(0)
+            super().configure(state="disabled")
+        return result
+
+
 class Application:
     def __init__(self, root, project_root=ROOT, progress_path=None):
         self.root = root
@@ -113,6 +134,10 @@ class Application:
         self.auth = AuthService(self.guest_progress_path.parent)
         self.tr = Translator(self.guest_progress_path.parent)
         self.login_preferences = LoginPreferences(self.guest_progress_path.parent)
+        self.ai_settings = AiSettings(self.guest_progress_path.parent)
+        self.ai_assistant = AiAssistant(self.ai_settings)
+        self._ai_asked = set()
+        self._ai_pending = set()
         self.display_store = DisplaySettings(self.guest_progress_path.parent)
         self.display_warning = ""
         try:
@@ -470,12 +495,38 @@ class Application:
             background=[("selected", SELECTED_BG)],
             foreground=[("selected", TEXT)],
         )
-        style.configure(
-            "Vertical.TScrollbar", background=HOVER, troughcolor=TRACK, bordercolor=BORDER
-        )
-        style.configure(
-            "Horizontal.TScrollbar", background=HOVER, troughcolor=TRACK, bordercolor=BORDER
-        )
+        for orientation in ("Vertical", "Horizontal"):
+            name = f"{orientation}.TScrollbar"
+            style.layout(
+                name,
+                [
+                    (
+                        f"{orientation}.Scrollbar.trough",
+                        {
+                            "sticky": "nswe",
+                            "children": [(f"{orientation}.Scrollbar.thumb", {"sticky": "nswe"})],
+                        },
+                    )
+                ],
+            )
+            style.configure(
+                name,
+                background="#44484F",
+                troughcolor=SURFACE,
+                bordercolor=SURFACE,
+                lightcolor="#44484F",
+                darkcolor="#44484F",
+                arrowsize=10,
+                width=9,
+                borderwidth=0,
+                relief="flat",
+            )
+            style.map(
+                name,
+                background=[("pressed", "#7A808A"), ("active", "#656B75")],
+                lightcolor=[("pressed", "#7A808A"), ("active", "#656B75")],
+                darkcolor=[("pressed", "#7A808A"), ("active", "#656B75")],
+            )
         style.configure("TNotebook", background=BG, bordercolor=BORDER)
         style.configure("TNotebook.Tab", background=HOVER, foreground=TEXT, padding=(12, 8))
         style.map("TNotebook.Tab", background=[("selected", SURFACE)])
@@ -1409,6 +1460,31 @@ class Application:
             self.body, text=self.tr("允许滚轮更改下拉选项和题数"), variable=self.wheel_choice
         ).pack(anchor="w", pady=4)
         self.button(self.tr("应用窗口与布局"), self.save_display, "Accent.TButton")
+        ai_card = ttk.LabelFrame(self.body, text=self.tr("问问 AI 设置"), padding=16)
+        ai_card.pack(fill="x", pady=8)
+        ai_config = self.ai_settings.load()
+        self.ai_endpoint = tk.StringVar(value=ai_config["endpoint"])
+        self.ai_model = tk.StringVar(value=ai_config["model"])
+        self.ai_key = tk.StringVar()
+        for title, variable, secret in (
+            (self.tr("API 地址"), self.ai_endpoint, False),
+            (self.tr("模型"), self.ai_model, False),
+            (self.tr("DeepSeek API Key（留空表示不修改）"), self.ai_key, True),
+        ):
+            ttk.Label(ai_card, text=title, style="Card.TLabel").pack(anchor="w", pady=(5, 2))
+            ttk.Entry(ai_card, textvariable=variable, show="•" if secret else "").pack(fill="x")
+        ttk.Label(
+            ai_card,
+            text=self.tr("API Key 使用当前系统账户加密保存，不会写入代码或提交到 Git。"),
+            style="Card.TLabel",
+            wraplength=700,
+        ).pack(anchor="w", pady=(8, 4))
+        ttk.Button(
+            ai_card,
+            text=self.tr("保存 AI 设置"),
+            command=self.save_ai_settings,
+            style="Accent.TButton",
+        ).pack(anchor="w", pady=(4, 0))
         if self.display_warning:
             self.label(self.display_warning)
         self.button(self.tr("返回"), self.home if self.signed_in else self.login_page)
@@ -1447,6 +1523,15 @@ class Application:
             messagebox.showerror(self.tr("保存失败"), self.tr(str(exc)), parent=self.root)
             return
         self.root.title(self.tr("Quiz App"))
+        self.settings()
+
+    def save_ai_settings(self):
+        try:
+            self.ai_settings.save(self.ai_endpoint.get(), self.ai_model.get(), self.ai_key.get())
+        except (ValueError, DataError, OSError) as exc:
+            messagebox.showerror(self.tr("保存失败"), self.tr(str(exc)), parent=self.root)
+            return
+        messagebox.showinfo(self.tr("保存成功"), self.tr("AI 设置已保存。"), parent=self.root)
         self.settings()
 
     def _control_wheel(self, event):
@@ -2088,8 +2173,12 @@ class Application:
 
         top = tk.Frame(self.body, bg=BG)
         top.pack(fill="x")
-        goal = card_frame(top, pad=20)
-        goal.pack(side="left", fill="both", expand=True, padx=(0, 12))
+        left = tk.Frame(top, bg=BG)
+        top.columnconfigure(0, weight=1, uniform="home_columns")
+        top.columnconfigure(1, weight=1, uniform="home_columns")
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        goal = card_frame(left, pad=16)
+        goal.pack(fill="x", anchor="n")
         goal_heading = tk.Frame(goal, bg=SURFACE)
         goal_heading.pack(fill="x")
         tk.Label(
@@ -2174,7 +2263,7 @@ class Application:
         ).pack(fill="x")
 
         side = tk.Frame(top, bg=BG)
-        side.pack(side="left", fill="both", expand=True)
+        side.grid(row=0, column=1, sticky="nsew")
         streak = card_frame(side, pad=18)
         streak.pack(fill="x", pady=(0, 12))
         tk.Label(
@@ -2208,8 +2297,57 @@ class Application:
                 font=(FONT, 15),
             ).pack()
 
-        recent = card_frame(self.body, pad=18)
-        recent.pack(fill="x", pady=(14, 0))
+        ai_card = card_frame(side, pad=18)
+        ai_card.pack(fill="both", expand=True)
+        tk.Label(
+            ai_card,
+            text=self.tr("问问 AI"),
+            bg=SURFACE,
+            fg=TEXT,
+            font=(FONT, 14, "bold"),
+        ).pack(anchor="w")
+        self.home_ai_input = tk.Text(
+            ai_card,
+            height=2,
+            wrap="word",
+            bg=HOVER,
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            padx=8,
+            pady=6,
+            font=TYPE_BODY,
+        )
+        self.home_ai_input.pack(fill="x")
+        placeholder = self.tr("请输入你的学习问题……")
+        self.home_ai_placeholder = placeholder
+        self.home_ai_input.insert("1.0", placeholder)
+        self.home_ai_input.configure(fg=MUTED)
+
+        def focus_input(_event):
+            if self.home_ai_input.get("1.0", "end-1c") == placeholder:
+                self.home_ai_input.delete("1.0", "end")
+                self.home_ai_input.configure(fg=TEXT)
+
+        def restore_input(_event):
+            if not self.home_ai_input.get("1.0", "end-1c").strip():
+                self.home_ai_input.insert("1.0", placeholder)
+                self.home_ai_input.configure(fg=MUTED)
+
+        self.home_ai_input.bind("<FocusIn>", focus_input)
+        self.home_ai_input.bind("<FocusOut>", restore_input)
+        self.home_ai_reply = self._assistant_bubble(ai_card, compact=True)
+        self.home_ai_reply.configure(height=5)
+        self.home_ai_button = ttk.Button(
+            ai_card,
+            text=self.tr("发送"),
+            command=self.ask_home_ai,
+            style="Accent.TButton",
+        )
+        self.home_ai_button.pack(anchor="e")
+
+        recent = card_frame(left, pad=12)
+        recent.pack(fill="both", expand=True, pady=(10, 0))
         tk.Label(
             recent,
             text=self.tr("最近学习"),
@@ -2220,7 +2358,7 @@ class Application:
         if history:
             for record in list(reversed(history))[:5]:
                 row = tk.Frame(recent, bg=SURFACE)
-                row.pack(fill="x", pady=6)
+                row.pack(fill="x", pady=3)
                 tk.Label(
                     row,
                     text=str(record["subject"]),
@@ -2235,7 +2373,7 @@ class Application:
                     bg=SURFACE,
                     fg=TEXT,
                     font=TYPE_HINT,
-                ).pack(side="left", padx=18)
+                ).pack(side="left", padx=8)
                 tk.Label(
                     row,
                     text=str(record["date"])[:10],
@@ -2266,6 +2404,101 @@ class Application:
                 fg=ERROR,
                 font=TYPE_HINT,
             ).pack(anchor="w", pady=(8, 0))
+
+    def ask_home_ai(self):
+        message = self.home_ai_input.get("1.0", "end-1c").strip()
+        if message == self.home_ai_placeholder:
+            message = ""
+        self._request_ai(message, self.home_ai_button, self.home_ai_reply)
+
+    def _assistant_bubble(self, parent, compact=False):
+        """Keep the character and its reply together in a responsive speech card."""
+        host = tk.Frame(parent, bg=SURFACE)
+        host.pack(fill="both", expand=True, pady=(10, 0))
+        character = tk.Frame(host, bg=SURFACE)
+        character.pack(side="right", anchor="s", padx=(10, 0))
+        host.character = character
+        avatar = tk.Label(character, bg=SURFACE, bd=0)
+        avatar.pack(side="bottom", pady=(8, 0))
+        try:
+            photo = tk.PhotoImage(
+                master=self.root, file=str(self.project_root / "AI-assistant-icon.png")
+            )
+            size = 88 if compact else 112
+            factor = max(1, (max(photo.width(), photo.height()) + size - 1) // size)
+            photo = photo.subsample(factor)
+            avatar.configure(image=photo)
+            avatar.image = photo
+        except (tk.TclError, OSError):
+            avatar.configure(text="✦", fg=PRIMARY, font=(FONT, 30))
+        bubble = tk.Frame(
+            host,
+            bg=HOVER,
+            padx=12,
+            pady=10,
+            highlightthickness=1,
+            highlightbackground=BORDER,
+        )
+        bubble.pack(side="left", fill="both", expand=True)
+        reply = AssistantReply(
+            bubble,
+            text=self.tr("输入一个学习问题，AI 会给出简短提示。"),
+            bg=HOVER,
+            fg=MUTED,
+            font=TYPE_HINT,
+            wrap="word",
+            width=1,
+            relief="flat",
+            height=9,
+        )
+        scrollbar = ttk.Scrollbar(bubble, orient="vertical", command=reply.yview)
+        scrollbar.pack(side="right", fill="y")
+        reply.configure(yscrollcommand=scrollbar.set)
+        reply.pack(side="left", fill="both", expand=True)
+        reply.character = character
+        return reply
+
+    def _request_ai(self, message, button, output, once_key=None):
+        if once_key is not None and (once_key in self._ai_asked or once_key in self._ai_pending):
+            return
+        if not message.strip():
+            output.configure(text=self.tr("请输入想问的问题。"), fg=ERROR)
+            return
+        if once_key is not None:
+            self._ai_pending.add(once_key)
+        button.state(["disabled"])
+        button.configure(text=self.tr("AI 思考中…"))
+        output.configure(text=self.tr("正在连接 AI 服务…"), fg=MUTED)
+
+        def worker():
+            try:
+                answer = self.ai_assistant.ask(message)
+                error = None
+            except (ValueError, OSError) as exc:
+                answer, error = "", str(exc)
+
+            def finish():
+                if once_key is not None:
+                    self._ai_pending.discard(once_key)
+                if not button.winfo_exists() or not output.winfo_exists():
+                    return
+                if error:
+                    output.configure(text=self.tr(error), fg=ERROR)
+                    button.state(["!disabled"])
+                    button.configure(text=self.tr("问问 AI") if once_key else self.tr("发送"))
+                    return
+                output.configure(text=answer, fg=TEXT)
+                if once_key is not None:
+                    self._ai_asked.add(once_key)
+                    button.configure(text=self.tr("本题已询问"))
+                    button.state(["disabled"])
+                else:
+                    button.configure(text=self.tr("发送"))
+                    button.state(["!disabled"])
+
+            self.root.after(0, finish)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def set_daily_goal(self):
         self.open_daily_plan_settings()
@@ -3317,8 +3550,8 @@ class Application:
         self.option_buttons = []
         self.option_cards = []
         self.option_status = {}
-        box = ttk.LabelFrame(host, text=self.tr("选项"), padding=12)
-        box.pack(fill="x", pady=8)
+        box = ttk.LabelFrame(host, text=self.tr("选项"), padding=6)
+        box.pack(fill="x", pady=4)
         for index, option in enumerate(q.options):
             text = f"{option_label(index)}: {option}"
             if selectable:
@@ -3329,9 +3562,9 @@ class Application:
                     highlightbackground=BORDER,
                     highlightcolor=PRIMARY,
                 )
-                card.pack(anchor="w", pady=6, fill="x")
+                card.pack(anchor="w", pady=3, fill="x")
                 inner = tk.Frame(card, bg=SURFACE)
-                inner.pack(fill="x", padx=8, pady=8)
+                inner.pack(fill="x", padx=6, pady=4)
                 mark = tk.Label(
                     inner,
                     text=option_label(index),
@@ -3444,9 +3677,24 @@ class Application:
             ),
         )
         self.answer = tk.StringVar(value="")
-        self.question_shell = ttk.Frame(self.body, style="App.TFrame")
-        self.question_shell.pack(fill="x")
+        split = ttk.Frame(self.body, style="App.TFrame")
+        split.pack(fill="both", expand=True)
+        split.columnconfigure(0, weight=6, uniform="quiz_split")
+        split.columnconfigure(1, weight=4, uniform="quiz_split")
+        self.question_shell = ttk.Frame(split, style="App.TFrame")
+        self.question_shell.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        assistant = card_frame(split, pad=12)
+        assistant.grid(row=0, column=1, sticky="nsew")
+        tk.Label(
+            assistant,
+            text=self.tr("问问 AI"),
+            bg=SURFACE,
+            fg=PRIMARY,
+            font=(FONT, 12, "bold"),
+            anchor="w",
+        ).pack(fill="x")
         self.question_content(engine.current, selectable=True, parent=self.question_shell)
+        self.quiz_ai_reply = self._assistant_bubble(assistant, compact=True)
         self.answer.trace_add("write", lambda *_: self._on_answer_changed())
         self.feedback = self.label("")
         dock = self._action_dock()
@@ -3460,11 +3708,51 @@ class Application:
             dock, text=next_label, command=self.advance, style="Accent.TButton"
         )
         self.next_button.state(["disabled"])
+        ai_style = ttk.Style(self.root)
+        ai_style.layout(
+            "Idea.TButton",
+            [("Button.padding", {"children": [("Button.label", {"sticky": "nswe"})]})],
+        )
+        ai_style.configure(
+            "Idea.TButton",
+            background=SURFACE,
+            foreground=PRIMARY,
+            font=(FONT, 11, "bold"),
+            padding=(2, 5),
+            borderwidth=0,
+        )
+        ai_style.map(
+            "Idea.TButton",
+            foreground=[("disabled", MUTED), ("active", TEXT)],
+            background=[("active", SURFACE), ("disabled", SURFACE)],
+        )
+        self.quiz_ai_button = ttk.Button(
+            self.quiz_ai_reply.character,
+            text="💡 " + self.tr("问问 AI"),
+            command=self.ask_current_question_ai,
+            style="Idea.TButton",
+        )
+        self.quiz_ai_button.pack(side="top", pady=(0, 6))
+        ai_key = (engine.id, engine.index)
+        if ai_key in self._ai_asked:
+            self.quiz_ai_button.configure(text=self.tr("本题已询问"))
+            self.quiz_ai_button.state(["disabled"])
         ttk.Button(
             dock, text=self.tr("结束练习并返回"), command=self.leave_quiz, style="Tool.TButton"
         ).pack(side="right")
         self._bind_quiz_keys()
         self.motion.fade_in(self.question_shell, duration=160)
+
+    def ask_current_question_ai(self):
+        if not self.engine:
+            return
+        key = (self.engine.id, self.engine.index)
+        self._request_ai(
+            question_message(self.engine.current),
+            self.quiz_ai_button,
+            self.quiz_ai_reply,
+            once_key=key,
+        )
 
     def _bind_quiz_keys(self):
         if self._quiz_keys_bound:

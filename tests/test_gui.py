@@ -25,6 +25,8 @@ class GuiTests(unittest.TestCase):
         self.root.update()
 
     def test_subject_cards_and_primary_action_positions(self):
+        self.app.home()
+        self.assertTrue(self.app.home_ai_button.winfo_exists())
         self.app.configure()
         self.assertEqual(self.app.chrome.pack_slaves()[0], self.app.chrome_back)
         self.assertEqual(self.app.chrome_back.winfo_manager(), "pack")
@@ -35,6 +37,7 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(self.app.subject.get(), "Science")
         self.assertEqual(self.app.start_button.pack_info()["side"], "left")
         self.app.start_quiz(self.app.questions[:2])
+        self.assertTrue(self.app.quiz_ai_button.winfo_exists())
         self.assertEqual(self.app.submit_button.pack_info()["side"], "left")
         self.assertFalse(
             any(isinstance(w, ttk.Progressbar) for w in self.app.body.winfo_children())

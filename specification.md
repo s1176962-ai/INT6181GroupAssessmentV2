@@ -87,6 +87,12 @@ Continuing the daily practice shall directly select random matching questions fo
 The system shall:
 - Display the current question and its answer options.
 - Support single-choice questions in the initial version.
+
+### FR-04A: AI Study Assistant
+
+The system shall provide an optional DeepSeek-compatible study assistant on the home and quiz pages. API endpoint, model and API Key shall be configurable; the Key shall be protected by the operating-system account and excluded from version control.
+
+Quiz assistance shall send only the current question text and textual options. It shall not send images, correct answers, explanations, account details or learning records. A successful response shall disable further AI requests for that question; a failed request may be retried. Requests shall run outside the UI thread and enforce bounded input and output sizes.
 - Allow users to select and submit an answer.
 - Immediately display whether the answer is correct or incorrect.
 - Show the correct answer and explanation after submission.
