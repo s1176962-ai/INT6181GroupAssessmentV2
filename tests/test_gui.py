@@ -24,6 +24,20 @@ class GuiTests(unittest.TestCase):
         self.app.enter_guest()
         self.root.update()
 
+    def test_battle_round_renders_question_portrait_and_options(self):
+        self.app.battle_page()
+        battle = self.app.battle
+        battle.start()
+        self.root.update()
+        self.assertTrue(battle.active)
+        self.assertEqual(len(battle.buttons), len(battle.questions[0].options))
+        self.assertTrue(battle.portrait.cget("image"))
+        battle.answer(battle.questions[0].answer)
+        self.assertEqual(battle.player.correct, 100)
+        battle.active = False
+        battle.generation += 1
+        self.root.after_cancel(battle.timer_id)
+
     def test_subject_cards_and_primary_action_positions(self):
         self.app.home()
         self.assertTrue(self.app.home_ai_button.winfo_exists())

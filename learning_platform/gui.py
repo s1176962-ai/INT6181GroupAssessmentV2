@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from . import modern
+from . import ui_tokens as T
 from .ai_assistant import AiAssistant, AiSettings, question_message
 from .auth import AuthService
 from .display import DisplaySettings, window_size
@@ -26,21 +28,14 @@ from .repositories import (
 )
 from .services import QuizEngine, image_path, select_questions, subject_image
 from .storage import DataError
-from . import modern
-from . import ui_tokens as T
 from .ui_tokens import (
     CARD_WIDTH,
     CONTENT_MAX,
     FONT,
     HIT,
-    PAGE_PAD,
     ROW_H,
-    SPACE_2,
     SPACE_3,
     SPACE_4,
-    SPACE_5,
-    SPACE_6,
-    SPACE_LG,
     SPACE_MD,
     SPACE_SM,
     SPACE_XL,
@@ -52,8 +47,6 @@ from .ui_tokens import (
     TYPE_FOOT,
     TYPE_HINT,
     TYPE_LABEL,
-    TYPE_MARK,
-    TYPE_TITLE,
     TYPE_TOOL,
 )
 from .user_ui import UserPage
@@ -154,7 +147,9 @@ class Application:
         self.chrome.configure(height=T.px(T.TOPBAR_H))
         self.chrome.pack_propagate(False)  # fixed 54px top bar
         self.chrome_back = modern.CircleIconButton(
-            self.chrome, glyph="←", command=self.home,
+            self.chrome,
+            glyph="←",
+            command=self.home,
         )
         self.chrome_title = ttk.Label(self.chrome, text=self.tr("首页"), style="Shell.TLabel")
         self.chrome_title.pack(side="left", padx=(T.px(T.SPACE_2), 0))
@@ -185,10 +180,7 @@ class Application:
         self.body = ttk.Frame(
             self.canvas,
             style="App.TFrame",
-            padding=(
-                (T.px(12), T.px(10)) if self.display["compact"]
-                else (T.px(24), T.px(20))
-            ),
+            padding=((T.px(12), T.px(10)) if self.display["compact"] else (T.px(24), T.px(20))),
         )
         self.window = self.canvas.create_window((0, 0), window=self.body, anchor="n")
         self.body.bind("<Configure>", self._on_body_configure)
@@ -300,14 +292,20 @@ class Application:
         style.configure("TLabel", background=T.BG, foreground=T.TEXT, font=(FONT, 11))
         style.configure("Card.TLabel", background=T.SURFACE, foreground=T.TEXT, font=(FONT, 11))
         style.configure("Shell.TLabel", background=T.BG, foreground=T.TEXT, font=(FONT, 11, "bold"))
-        style.configure("Mark.TLabel", background=T.BG, foreground=T.ACCENT, font=(FONT, 18, "bold"))
+        style.configure(
+            "Mark.TLabel", background=T.BG, foreground=T.ACCENT, font=(FONT, 18, "bold")
+        )
         style.configure("Brand.TFrame", background=T.SKY)
         style.configure("Brand.TLabel", background=T.SKY, foreground=T.MUTED, font=TYPE_HINT)
         style.configure("BrandTitle.TLabel", background=T.SKY, foreground=T.TEXT, font=T.TYPE_HERO)
-        style.configure("BrandMark.TLabel", background=T.SKY, foreground=T.MUTED, font=T.TYPE_KICKER)
+        style.configure(
+            "BrandMark.TLabel", background=T.SKY, foreground=T.MUTED, font=T.TYPE_KICKER
+        )
         style.configure("Chip.TLabel", background=T.HOVER, foreground=T.TEXT, font=TYPE_HINT)
         style.configure("Demo.TLabel", background=T.SURFACE, foreground=T.MUTED, font=TYPE_HINT)
-        style.configure("Stat.TLabel", background=T.SURFACE, foreground=T.TEXT, font=(FONT, 16, "bold"))
+        style.configure(
+            "Stat.TLabel", background=T.SURFACE, foreground=T.TEXT, font=(FONT, 16, "bold")
+        )
         style.configure("StatHint.TLabel", background=T.SURFACE, foreground=T.MUTED, font=(FONT, 8))
         style.configure("Foot.TLabel", background=T.BG, foreground=T.MUTED, font=(FONT, 8))
         style.configure(
@@ -710,12 +708,25 @@ class Application:
         style.configure("TNotebook", background=T.BG, bordercolor=T.BORDER)
         style.configure("TNotebook.Tab", background=T.HOVER, foreground=T.TEXT, padding=(12, 8))
         style.map("TNotebook.Tab", background=[("selected", T.SURFACE)])
-        style.configure("Horizontal.TProgressbar", troughcolor=T.TRACK, background=T.PRIMARY, thickness=T.px(T.PROGRESS_H))
+        style.configure(
+            "Horizontal.TProgressbar",
+            troughcolor=T.TRACK,
+            background=T.PRIMARY,
+            thickness=T.px(T.PROGRESS_H),
+        )
         style.configure("TSeparator", background=T.BORDER_LIGHT)
-        style.configure("Card.TLabel", background=T.SURFACE, foreground=T.TEXT, font=T.TYPE_BODY_LARGE)
-        style.configure("StatHint.TLabel", background=T.SURFACE, foreground=T.TEXT_MUTED, font=T.TYPE_CAPTION)
-        style.configure("Hint.TLabel", background=T.SURFACE, foreground=T.TEXT_SECONDARY, font=T.TYPE_CAPTION)
-        style.configure("Muted.TLabel", background=T.BG, foreground=T.TEXT_SECONDARY, font=T.TYPE_CAPTION)
+        style.configure(
+            "Card.TLabel", background=T.SURFACE, foreground=T.TEXT, font=T.TYPE_BODY_LARGE
+        )
+        style.configure(
+            "StatHint.TLabel", background=T.SURFACE, foreground=T.TEXT_MUTED, font=T.TYPE_CAPTION
+        )
+        style.configure(
+            "Hint.TLabel", background=T.SURFACE, foreground=T.TEXT_SECONDARY, font=T.TYPE_CAPTION
+        )
+        style.configure(
+            "Muted.TLabel", background=T.BG, foreground=T.TEXT_SECONDARY, font=T.TYPE_CAPTION
+        )
 
         # Remove the system 1-2px dotted focus rectangle. Modern controls draw a
         # 3px primary glow themselves; legacy ttk widgets keep a 1px primary
@@ -767,10 +778,20 @@ class Application:
             return node
 
         for name in (
-            "TButton", "Accent.TButton", "Tool.TButton", "Link.TButton",
-            "Ghost.TButton", "Icon.TButton", "TEntry", "Error.TEntry",
-            "TCombobox", "TSpinbox", "TCheckbutton", "Card.TCheckbutton",
-            "TRadiobutton", "Treeview",
+            "TButton",
+            "Accent.TButton",
+            "Tool.TButton",
+            "Link.TButton",
+            "Ghost.TButton",
+            "Icon.TButton",
+            "TEntry",
+            "Error.TEntry",
+            "TCombobox",
+            "TSpinbox",
+            "TCheckbutton",
+            "Card.TCheckbutton",
+            "TRadiobutton",
+            "Treeview",
         ):
             try:
                 layout = _strip_focus(style.layout(name))
@@ -801,6 +822,7 @@ class Application:
         items = [
             ("home", "home", "首页", self.home),
             ("practice", "practice", "开始练习", self.configure),
+            ("battle", "practice", "答题对战", self.battle_page),
             ("notebook", "notebook", "错题本与复习", self.notebook),
             ("history", "history", "学习统计与历史", self.history),
             ("settings", "settings", "设置 / 语言", self.settings),
@@ -868,15 +890,31 @@ class Application:
         menu.tk_popup(self.nav_user.winfo_rootx(), self.nav_user.winfo_rooty() - 90)
 
     def _nav_go(self, key, command):
+        battle = getattr(self, "battle", None)
+        if battle and battle.active:
+            if not messagebox.askyesno(
+                self.tr("答题对战"), self.tr("退出当前对战？"), parent=self.root
+            ):
+                return
+            battle.active = False
+            battle.generation += 1
         self._nav_key = key
         command()
+
+    def battle_page(self):
+        if not self.check_session():
+            return
+        from .battle_ui import BattlePage
+
+        self.battle = BattlePage(self)
+        self.battle.setup()
 
     def _nav_hover(self, button, entering):
         # Hover / pressed / focus / disabled states are handled inside NavItem.
         return None
 
     def _paint_nav(self):
-        expected = {"home", "practice", "notebook", "history", "settings"}
+        expected = {"home", "practice", "battle", "notebook", "history", "settings"}
         if self.user:
             expected.add("questions")
             if self.user["role"] == "admin":
@@ -1173,7 +1211,9 @@ class Application:
 
     def _text_button(self, parent, text, command, bg=None):
         # Resolve at call time: the palette is rebound when the theme changes.
-        button = self._flat_button(parent, text, command, TYPE_HINT, bg or T.SURFACE, T.PRIMARY, 0, 2)
+        button = self._flat_button(
+            parent, text, command, TYPE_HINT, bg or T.SURFACE, T.PRIMARY, 0, 2
+        )
 
         def enter(_e):
             if str(button["state"]) == "normal":
@@ -1196,7 +1236,9 @@ class Application:
         shell.configure(height=T.px(48))
         shell.pack_propagate(False)
         button.place(relx=0, rely=0, relwidth=1, relheight=1)
-        self._bind_chrome(button, T.BUTTON_FILL, T.PRIMARY_HOVER, T.PRIMARY_ACTIVE, T.BUTTON_INK, T.BUTTON_INK)
+        self._bind_chrome(
+            button, T.BUTTON_FILL, T.PRIMARY_HOVER, T.PRIMARY_ACTIVE, T.BUTTON_INK, T.BUTTON_INK
+        )
         button._shell = shell
         return button
 
@@ -1269,8 +1311,10 @@ class Application:
         # Left panel: one quiet wordmark, one sentence, one hairline, one fact.
         # The old geometric art and per-subject progress bars were decorative only.
         self.brand = tk.Frame(
-            self.login_split, bg=T.SKY,
-            padx=T.px(T.SPACE_6), pady=T.px(T.SPACE_6),
+            self.login_split,
+            bg=T.SKY,
+            padx=T.px(T.SPACE_6),
+            pady=T.px(T.SPACE_6),
         )
         brand_inner = tk.Frame(self.brand, bg=T.SKY)
         brand_inner.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.9)
@@ -1292,9 +1336,7 @@ class Application:
         title.pack(anchor="center", pady=(T.px(T.SPACE_5), T.px(T.SPACE_3)))
         brand_inner.bind(
             "<Configure>",
-            lambda e: title.configure(
-                wraplength=max(e.width - T.px(T.SPACE_2), T.px(320))
-            ),
+            lambda e: title.configure(wraplength=max(e.width - T.px(T.SPACE_2), T.px(320))),
         )
         tk.Label(
             brand_inner,
@@ -1306,9 +1348,7 @@ class Application:
             justify="center",
             anchor="center",
         ).pack(anchor="center", pady=(0, T.px(T.SPACE_6)))
-        tk.Frame(brand_inner, bg=T.BORDER, height=T.px(1)).pack(
-            fill="x", pady=T.px(T.SPACE_5)
-        )
+        tk.Frame(brand_inner, bg=T.BORDER, height=T.px(1)).pack(fill="x", pady=T.px(T.SPACE_5))
         counts = {}
         for question in self.questions:
             counts[question.subject] = counts.get(question.subject, 0) + 1
@@ -1331,7 +1371,9 @@ class Application:
         self.login_tools = tk.Frame(self.login_form, bg=T.BG)
         self.login_tools.pack(fill="x", pady=(0, T.px(T.SPACE_4)))
         self._tool_button(self.login_tools, self.tr("退出"), self.close).pack(side="right")
-        lang_menu = tk.Menu(self.root, tearoff=0, bg=T.SURFACE, fg=T.TEXT, activebackground=T.HOVER, bd=0)
+        lang_menu = tk.Menu(
+            self.root, tearoff=0, bg=T.SURFACE, fg=T.TEXT, activebackground=T.HOVER, bd=0
+        )
         lang_menu.add_command(
             label=self.tr("简体中文"), command=lambda: self._apply_login_language("zh")
         )
@@ -1392,7 +1434,9 @@ class Application:
         )
         name_entry = self._text_entry(card, self.login_name)
         name_entry._shell.pack(anchor="w", fill="x", pady=(T.px(SPACE_XS), T.px(SPACE_MD)))
-        tk.Label(card, text=self.tr("密码"), font=TYPE_LABEL, bg=T.SURFACE, fg=T.TEXT).pack(anchor="w")
+        tk.Label(card, text=self.tr("密码"), font=TYPE_LABEL, bg=T.SURFACE, fg=T.TEXT).pack(
+            anchor="w"
+        )
         password_box = tk.Frame(card, bg=T.BORDER, highlightthickness=0, bd=0)
         password_box.pack(anchor="w", fill="x", pady=(T.px(SPACE_XS), T.px(SPACE_MD)))
         password_inner = tk.Frame(password_box, bg=T.SURFACE)
@@ -1480,8 +1524,12 @@ class Application:
         ).pack(fill="x", pady=(T.px(SPACE_SM), 0))
         if self.tr.warning:
             tk.Label(
-                guest, text=self.tr.warning, font=TYPE_HINT, bg=T.BG, fg=T.MUTED,
-            wraplength=T.px(CARD_WIDTH),
+                guest,
+                text=self.tr.warning,
+                font=TYPE_HINT,
+                bg=T.BG,
+                fg=T.MUTED,
+                wraplength=T.px(CARD_WIDTH),
             ).pack(pady=T.px(SPACE_SM))
         for widget in self.login_fields:
             widget.bind("<Return>", lambda e, mode=registering: self.authenticate(mode))
@@ -1499,6 +1547,28 @@ class Application:
                 return
 
         self._login_after = self.root.after(1, _safe_layout)
+
+        decoration = self.project_root / "assets" / "images" / "home-decoration.png"
+        if decoration.exists():
+            base = tk.PhotoImage(master=self.root, file=str(decoration))
+            ornament = tk.Label(self.login_host, bg=T.BG, bd=0, takefocus=0)
+
+            def position_ornament(_event=None):
+                if not ornament.winfo_exists() or self.login_host is None:
+                    return
+                width = self.login_host.winfo_width()
+                height = self.login_host.winfo_height()
+                if width < T.px(1050) or height < T.px(650):
+                    ornament.place_forget()
+                    return
+                size = min(T.px(260), int(width * 0.14), int(height * 0.28))
+                factor = max(1, (max(base.width(), base.height()) + size - 1) // size)
+                ornament.image = base.subsample(factor)
+                ornament.configure(image=ornament.image)
+                ornament.place(relx=1, rely=1, x=-T.px(12), y=-T.px(12), anchor="se")
+
+            self.login_host.bind("<Configure>", position_ornament, add="+")
+            self.root.after_idle(position_ornament)
 
     def authenticate(self, registering=False):
         if self._login_busy or not getattr(self, "login_button", None):
@@ -1654,6 +1724,7 @@ class Application:
         def fit(widget):
             """Let a fill="x" description use the whole card instead of a
             fixed 640px column (which looks clipped on a maximized window)."""
+
             def on_resize(event):
                 target = max(event.width - T.px(T.SPACE_1), 1)
                 try:
@@ -1661,6 +1732,7 @@ class Application:
                         widget.configure(wraplength=target)
                 except tk.TclError:
                     pass
+
             widget.bind("<Configure>", on_resize, add="+")
             return widget
 
@@ -1670,21 +1742,28 @@ class Application:
         theme_row = tk.Frame(appearance, bg=T.SURFACE)
         theme_row.pack(fill="x")
         tk.Label(
-            theme_row, text=self.tr("深色模式"), bg=T.SURFACE, fg=T.TEXT,
-            font=T.TYPE_BODY_LARGE, anchor="w",
+            theme_row,
+            text=self.tr("深色模式"),
+            bg=T.SURFACE,
+            fg=T.TEXT,
+            font=T.TYPE_BODY_LARGE,
+            anchor="w",
         ).pack(side="left")
         modern.Toggle(
             theme_row,
             value=T.theme_name() == "dark",
-            command=lambda: self.apply_theme(
-                "light" if T.theme_name() == "dark" else "dark"
-            ),
+            command=lambda: self.apply_theme("light" if T.theme_name() == "dark" else "dark"),
         ).pack(side="right")
-        fit(tk.Label(
-            appearance,
-            text=self.tr("主题会立即生效并记住选择。"),
-            bg=T.SURFACE, fg=T.TEXT_MUTED, font=T.TYPE_CAPTION, anchor="w",
-        )).pack(fill="x", pady=(T.px(T.SPACE_2), 0))
+        fit(
+            tk.Label(
+                appearance,
+                text=self.tr("主题会立即生效并记住选择。"),
+                bg=T.SURFACE,
+                fg=T.TEXT_MUTED,
+                font=T.TYPE_CAPTION,
+                anchor="w",
+            )
+        ).pack(fill="x", pady=(T.px(T.SPACE_2), 0))
 
         card = ttk.LabelFrame(self.body, text=self.tr("界面语言"), padding=pad)
         card.pack(fill="x", pady=gap)
@@ -1695,11 +1774,13 @@ class Application:
         ttk.Radiobutton(card, text="English", variable=self.language, value="en").pack(
             anchor="w", pady=T.px(T.SPACE_1)
         )
-        fit(ttk.Label(
-            card,
-            text=self.tr("切换立即生效并记住选择；题库内容保留原文。"),
-            style="Card.TLabel",
-        )).pack(fill="x", pady=(T.px(T.SPACE_3), 0))
+        fit(
+            ttk.Label(
+                card,
+                text=self.tr("切换立即生效并记住选择；题库内容保留原文。"),
+                style="Card.TLabel",
+            )
+        ).pack(fill="x", pady=(T.px(T.SPACE_3), 0))
 
         motion = ttk.LabelFrame(self.body, text=self.tr("动画效果"), padding=pad)
         motion.pack(fill="x", pady=gap)
@@ -1710,11 +1791,13 @@ class Application:
         ttk.Radiobutton(
             motion, text=self.tr("关闭"), variable=self.motion_choice, value=False
         ).pack(anchor="w", pady=T.px(T.SPACE_1))
-        fit(ttk.Label(
-            motion,
-            text=self.tr("关闭后页面直接切换，仍保留颜色和文字反馈。"),
-            style="Card.TLabel",
-        )).pack(fill="x", pady=(T.px(T.SPACE_3), 0))
+        fit(
+            ttk.Label(
+                motion,
+                text=self.tr("关闭后页面直接切换，仍保留颜色和文字反馈。"),
+                style="Card.TLabel",
+            )
+        ).pack(fill="x", pady=(T.px(T.SPACE_3), 0))
 
         self.button(self.tr("保存语言设置"), self.save_language, "Accent.TButton")
         self.label(self.tr("窗口与布局"))
@@ -1754,11 +1837,13 @@ class Application:
                 anchor="w", pady=(T.px(T.SPACE_1), T.px(T.SPACE_1))
             )
             ttk.Entry(ai_card, textvariable=variable, show="•" if secret else "").pack(fill="x")
-        fit(ttk.Label(
-            ai_card,
-            text=self.tr("API Key 使用当前系统账户加密保存，不会写入代码或提交到 Git。"),
-            style="Card.TLabel",
-        )).pack(fill="x", pady=(T.px(T.SPACE_3), T.px(T.SPACE_1)))
+        fit(
+            ttk.Label(
+                ai_card,
+                text=self.tr("API Key 使用当前系统账户加密保存，不会写入代码或提交到 Git。"),
+                style="Card.TLabel",
+            )
+        ).pack(fill="x", pady=(T.px(T.SPACE_3), T.px(T.SPACE_1)))
         ttk.Button(
             ai_card,
             text=self.tr("保存 AI 设置"),
@@ -1843,8 +1928,7 @@ class Application:
     def _page_wheel(self, event):
         if isinstance(
             event.widget,
-            (ttk.Combobox, ttk.Spinbox, tk.Text, ttk.Treeview,
-             modern.Dropdown, modern.Stepper),
+            (ttk.Combobox, ttk.Spinbox, tk.Text, ttk.Treeview, modern.Dropdown, modern.Stepper),
         ):
             return
         self.canvas.yview_scroll(-int(event.delta / 120), "units")
@@ -1944,6 +2028,7 @@ class Application:
         constant, or leaves it in a narrow column on a maximized 2K/4K window.
         Only use on labels packed with fill="x" (their width is stable).
         """
+
         def on_resize(event):
             target = max(event.width - T.px(T.SPACE_1), 1)
             try:
@@ -1969,8 +2054,10 @@ class Application:
 
     def button(self, text, command, style="TButton"):
         variant = (
-            "primary" if "Accent" in style
-            else "ghost" if ("Ghost" in style or "Link" in style)
+            "primary"
+            if "Accent" in style
+            else "ghost"
+            if ("Ghost" in style or "Link" in style)
             else "secondary"
         )
         widget = modern.SoftButton(
@@ -2023,7 +2110,9 @@ class Application:
     def _plan_ring(self, parent, plan):
         """Render the concept mock-up's circular daily-goal indicator."""
         size = 152
-        canvas = tk.Canvas(parent, width=size, height=size, bg=T.SURFACE, highlightthickness=0, bd=0)
+        canvas = tk.Canvas(
+            parent, width=size, height=size, bg=T.SURFACE, highlightthickness=0, bd=0
+        )
         canvas.create_oval(15, 15, size - 15, size - 15, outline=T.TRACK, width=12)
         if plan["percent"]:
             canvas.create_arc(
@@ -2221,9 +2310,9 @@ class Application:
             fg=T.MUTED,
             font=TYPE_HINT,
         ).pack(anchor="w", pady=(0, 12))
-        tk.Label(feed, text=self.tr("你的学习动态"), bg=T.BG, fg=T.TEXT, font=(FONT, 15, "bold")).pack(
-            anchor="w", pady=(4, 8)
-        )
+        tk.Label(
+            feed, text=self.tr("你的学习动态"), bg=T.BG, fg=T.TEXT, font=(FONT, 15, "bold")
+        ).pack(anchor="w", pady=(4, 8))
         if bank_error:
             empty = card_frame(feed, pad=16)
             empty.pack(fill="x")
@@ -2249,7 +2338,11 @@ class Application:
             empty = card_frame(feed, pad=16)
             empty.pack(fill="x")
             tk.Label(
-                empty, text=self.tr("还没有学习记录"), bg=T.SURFACE, fg=T.TEXT, font=(FONT, 13, "bold")
+                empty,
+                text=self.tr("还没有学习记录"),
+                bg=T.SURFACE,
+                fg=T.TEXT,
+                font=(FONT, 13, "bold"),
             ).pack(anchor="w")
             tk.Label(
                 empty,
@@ -2305,7 +2398,9 @@ class Application:
                 lambda value=subject_name: self.configure(value),
                 bg=T.SURFACE,
             ).pack(side="left")
-        search_shell = tk.Frame(rail, bg=T.SURFACE, highlightthickness=1, highlightbackground=T.BORDER)
+        search_shell = tk.Frame(
+            rail, bg=T.SURFACE, highlightthickness=1, highlightbackground=T.BORDER
+        )
         search_shell.pack(fill="x", pady=(0, 8))
         self.home_search = tk.StringVar()
         search = tk.Entry(
@@ -2462,13 +2557,15 @@ class Application:
             else self.tr("晚上好")
         )
         separator = ", " if self.tr.language == "en" else "，"
+        welcome = tk.Frame(self.body, bg=T.BG)
+        welcome.pack(fill="x", pady=(0, T.px(T.SPACE_3)))
         tk.Label(
-            self.body,
+            welcome,
             text=f"{greeting}{separator}{name}",
             bg=T.BG,
             fg=T.TEXT,
             font=(FONT, 24, "bold"),
-        ).pack(anchor="w", pady=(0, T.px(T.SPACE_5)))
+        ).pack(side="left", anchor="center")
 
         history, data_error = [], ""
         try:
@@ -2667,15 +2764,17 @@ class Application:
             # The card now grows with the viewport: centre the empty state so
             # the extra height reads as deliberate whitespace, not a bug.
             tk.Frame(recent, bg=T.SURFACE).pack(fill="both", expand=True)
-            self._fit_wrap(tk.Label(
-                recent,
-                text=self.tr("还没有学习记录，完成第一次练习后会显示在这里。"),
-                bg=T.SURFACE,
-                fg=T.MUTED,
-                font=T.TYPE_BODY_LARGE,
-                justify="left",
-                anchor="w",
-            )).pack(fill="x", pady=(0, T.px(T.SPACE_4)))
+            self._fit_wrap(
+                tk.Label(
+                    recent,
+                    text=self.tr("还没有学习记录，完成第一次练习后会显示在这里。"),
+                    bg=T.SURFACE,
+                    fg=T.MUTED,
+                    font=T.TYPE_BODY_LARGE,
+                    justify="left",
+                    anchor="w",
+                )
+            ).pack(fill="x", pady=(0, T.px(T.SPACE_4)))
             self._mock_action(
                 recent,
                 self.tr("开始第一次练习"),
@@ -2712,26 +2811,47 @@ class Application:
         head = tk.Frame(card, bg=T.SURFACE)
         head.pack(fill="x")
         dot = tk.Canvas(
-            head, width=T.px(8), height=T.px(8), bg=T.SURFACE,
-            highlightthickness=0, bd=0, takefocus=0,
+            head,
+            width=T.px(8),
+            height=T.px(8),
+            bg=T.SURFACE,
+            highlightthickness=0,
+            bd=0,
+            takefocus=0,
         )
         dot.create_oval(0, 0, T.px(8), T.px(8), fill=T.PRIMARY, outline="")
         dot.pack(side="left", padx=(0, T.px(T.SPACE_2)))
         tk.Label(
-            head, text=self.tr("问问 AI"), bg=T.SURFACE, fg=T.TEXT,
-            font=T.TYPE_HEADING, anchor="w",
+            head,
+            text=self.tr("问问 AI"),
+            bg=T.SURFACE,
+            fg=T.TEXT,
+            font=T.TYPE_HEADING,
+            anchor="w",
         ).pack(side="left")
 
         composer = modern.SoftPanel(
-            card, fill=T.AI_INPUT_BG, edge=T.AI_INPUT_EDGE, padding=T.SPACE_3,
+            card,
+            fill=T.AI_INPUT_BG,
+            edge=T.AI_INPUT_EDGE,
+            padding=T.SPACE_3,
         )
         composer.pack(fill="x", pady=(T.px(T.SPACE_3), 0))
         row = tk.Frame(composer.content, bg=T.AI_INPUT_BG)
         row.pack(fill="x")
         self.home_ai_input = tk.Text(
-            row, height=2, width=1, wrap="word",
-            bg=T.AI_INPUT_BG, fg=T.TEXT, insertbackground=T.PRIMARY,
-            relief="flat", bd=0, highlightthickness=0, padx=0, pady=0,
+            row,
+            height=2,
+            width=1,
+            wrap="word",
+            bg=T.AI_INPUT_BG,
+            fg=T.TEXT,
+            insertbackground=T.PRIMARY,
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
+            padx=0,
+            pady=0,
             font=T.TYPE_BODY,
         )
         self.home_ai_input.pack(side="left", fill="both", expand=True)
@@ -2758,20 +2878,27 @@ class Application:
         self.home_ai_input.bind("<Return>", self._home_ai_return)
 
         self.home_ai_button = modern.SoftButton(
-            row, text=self.tr("发送"), command=self.ask_home_ai,
-            variant="primary", width=T.px(88),
+            row,
+            text=self.tr("发送"),
+            command=self.ask_home_ai,
+            variant="primary",
+            width=T.px(88),
         )
-        self.home_ai_button.pack(
-            side="right", anchor="s", padx=(T.px(T.SPACE_2), 0)
-        )
+        self.home_ai_button.pack(side="right", anchor="s", padx=(T.px(T.SPACE_2), 0))
         tk.Label(
-            composer.content, text=self.tr("Enter 发送 · Shift+Enter 换行"),
-            bg=T.AI_INPUT_BG, fg=T.TEXT_SECONDARY,
-            font=T.TYPE_CAPTION, anchor="w",
+            composer.content,
+            text=self.tr("Enter 发送 · Shift+Enter 换行"),
+            bg=T.AI_INPUT_BG,
+            fg=T.TEXT_SECONDARY,
+            font=T.TYPE_CAPTION,
+            anchor="w",
         ).pack(fill="x", pady=(T.px(T.SPACE_1), 0))
 
         reply_panel = modern.SoftPanel(
-            card, fill=T.AI_REPLY_BG, edge=T.AI_REPLY_EDGE, padding=T.SPACE_4,
+            card,
+            fill=T.AI_REPLY_BG,
+            edge=T.AI_REPLY_EDGE,
+            padding=T.SPACE_4,
         )
         reply_panel.pack(fill="both", expand=True, pady=(T.px(T.SPACE_3), 0))
 
@@ -2783,16 +2910,24 @@ class Application:
         group = tk.Frame(self._home_ai_idle, bg=T.AI_REPLY_BG)
         group.place(relx=0.5, rely=0.5, anchor="center")
         self._home_mascot = tk.Canvas(
-            group, width=T.px(120), height=T.px(120), bg=T.AI_REPLY_BG,
-            highlightthickness=0, bd=0, takefocus=0,
+            group,
+            width=T.px(120),
+            height=T.px(120),
+            bg=T.AI_REPLY_BG,
+            highlightthickness=0,
+            bd=0,
+            takefocus=0,
         )
         self._home_mascot.pack()
         self._home_mascot.bind("<Configure>", self._draw_home_mascot)
         self._home_ai_hint = tk.Label(
             group,
             text=self.tr("问我任何学习问题，我会给出简短提示。"),
-            bg=T.AI_REPLY_BG, fg=T.TEXT_SECONDARY,
-            font=T.TYPE_CAPTION, justify="center", anchor="center",
+            bg=T.AI_REPLY_BG,
+            fg=T.TEXT_SECONDARY,
+            font=T.TYPE_CAPTION,
+            justify="center",
+            anchor="center",
         )
         self._home_ai_hint.pack(pady=(T.px(T.SPACE_2), 0))
         self._home_ai_idle.bind("<Configure>", self._resize_home_idle)
@@ -2800,13 +2935,27 @@ class Application:
         answer = tk.Frame(reply_panel.content, bg=T.AI_REPLY_BG)
         self._home_ai_answer = answer
         tk.Label(
-            answer, text=self.tr("AI 提示"), bg=T.AI_REPLY_BG, fg=T.PRIMARY,
-            font=T.TYPE_CAPTION, anchor="w",
+            answer,
+            text=self.tr("AI 提示"),
+            bg=T.AI_REPLY_BG,
+            fg=T.PRIMARY,
+            font=T.TYPE_CAPTION,
+            anchor="w",
         ).pack(anchor="w", pady=(0, T.px(T.SPACE_1)))
         self.home_ai_reply = AssistantReply(
-            answer, text="", height=4, bg=T.AI_REPLY_BG, fg=T.TEXT, font=T.TYPE_BODY,
-            wrap="word", width=1, relief="flat", bd=0, highlightthickness=0,
-            padx=0, pady=0,
+            answer,
+            text="",
+            height=4,
+            bg=T.AI_REPLY_BG,
+            fg=T.TEXT,
+            font=T.TYPE_BODY,
+            wrap="word",
+            width=1,
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
+            padx=0,
+            pady=0,
         )
         self.home_ai_reply.pack(fill="both", expand=True)
         self.home_ai_reply._on_text = self._on_home_ai_text
@@ -2868,7 +3017,10 @@ class Application:
         target = min(width - T.px(T.SPACE_2), height, T.px(320))
         if base is None or target < T.px(40):
             canvas.create_text(
-                width / 2, height / 2, text="✦", fill=T.PRIMARY,
+                width / 2,
+                height / 2,
+                text="✦",
+                fill=T.PRIMARY,
                 font=(FONT, max(12, int(target / 4)), "bold"),
             )
             return
@@ -3226,9 +3378,7 @@ class Application:
             ("message", self.tr("结果 / 错误原因"), 520),
         ):
             self.import_table.heading(key, text=title)
-            self.import_table.column(
-                key, width=T.px(width), anchor="w", stretch=key == "message"
-            )
+            self.import_table.column(key, width=T.px(width), anchor="w", stretch=key == "message")
         self.import_table.pack(fill="both", expand=True)
         self.import_confirm = ttk.Button(
             self.body,
@@ -3366,9 +3516,7 @@ class Application:
             ("question", self.tr("题目"), 390),
         ):
             self.import_table.heading(key, text=title)
-            self.import_table.column(
-                key, width=T.px(width), anchor="w", stretch=key == "question"
-            )
+            self.import_table.column(key, width=T.px(width), anchor="w", stretch=key == "question")
         self.import_table.pack(fill="both", expand=True, pady=(0, 14))
         self.import_table.tag_configure("valid", foreground=T.SUCCESS_FG)
         self.import_table.tag_configure("duplicate", foreground=T.MUTED)
@@ -3577,7 +3725,9 @@ class Application:
             open_this = name == subject and current != name
             if open_this:
                 detail.pack(fill="x", pady=(4, 0))
-                card.configure(highlightbackground=T.PRIMARY, highlightthickness=2, bg=T.SELECTED_BG)
+                card.configure(
+                    highlightbackground=T.PRIMARY, highlightthickness=2, bg=T.SELECTED_BG
+                )
             else:
                 detail.pack_forget()
                 card.configure(highlightbackground=T.BORDER, highlightthickness=1, bg=T.SURFACE)
@@ -3625,17 +3775,26 @@ class Application:
         header = tk.Frame(host, bg=T.SURFACE)
         header.pack(fill="x", pady=(0, T.px(T.SPACE_5)))
         tk.Label(
-            header, text=self.tr("练习设置"), bg=T.SURFACE, fg=T.TEXT,
-            font=T.TYPE_HEADING, anchor="w",
+            header,
+            text=self.tr("练习设置"),
+            bg=T.SURFACE,
+            fg=T.TEXT,
+            font=T.TYPE_HEADING,
+            anchor="w",
         ).pack(side="left")
         self.config_summary = tk.Label(
-            header, text="", bg=T.SURFACE, fg=T.TEXT_MUTED,
-            font=T.TYPE_CAPTION, anchor="e",
+            header,
+            text="",
+            bg=T.SURFACE,
+            fg=T.TEXT_MUTED,
+            font=T.TYPE_CAPTION,
+            anchor="e",
         )
         self.config_summary.pack(side="right")
 
-        tk.Label(host, text=self.tr("学科"), bg=T.SURFACE, fg=T.TEXT,
-                 font=T.TYPE_HEADING, anchor="w").pack(fill="x")
+        tk.Label(
+            host, text=self.tr("学科"), bg=T.SURFACE, fg=T.TEXT, font=T.TYPE_HEADING, anchor="w"
+        ).pack(fill="x")
         picker = tk.Frame(host, bg=T.SURFACE)
         picker.pack(fill="x", pady=(T.px(T.FIELD_GAP), 0))
         counts = {name: sum(q.subject == name for q in self.questions) for name in subjects}
@@ -3648,8 +3807,11 @@ class Application:
                 command=lambda value=name: self._select_subject(value),
             )
             item.grid(
-                row=index // 3, column=index % 3, sticky="nsew",
-                padx=(0, T.px(T.SPACE_2)), pady=T.px(T.SPACE_1),
+                row=index // 3,
+                column=index % 3,
+                sticky="nsew",
+                padx=(0, T.px(T.SPACE_2)),
+                pady=T.px(T.SPACE_1),
             )
             picker.columnconfigure(index % 3, weight=1, uniform="subjects")
             self._subject_cards.append((item, name))
@@ -3663,11 +3825,13 @@ class Application:
         def column(row, col, title, caption=None):
             box = tk.Frame(grid, bg=T.SURFACE)
             box.grid(
-                row=row, column=col, sticky="nsew",
-                padx=(0 if col == 0 else T.px(T.SPACE_2),
-                      T.px(T.SPACE_2) if col == 0 else 0),
+                row=row,
+                column=col,
+                sticky="nsew",
+                padx=(0 if col == 0 else T.px(T.SPACE_2), T.px(T.SPACE_2) if col == 0 else 0),
                 pady=(T.px(T.GROUP_GAP), 0) if row else 0,
             )
+
             def fit(event):
                 widget = event.widget
                 target = max(event.width - T.px(T.SPACE_1), 1)
@@ -3678,16 +3842,26 @@ class Application:
                     pass
 
             title_label = tk.Label(
-                box, text=title, bg=T.SURFACE, fg=T.TEXT,
-                font=T.TYPE_HEADING, anchor="w", justify="left",
+                box,
+                text=title,
+                bg=T.SURFACE,
+                fg=T.TEXT,
+                font=T.TYPE_HEADING,
+                anchor="w",
+                justify="left",
                 wraplength=T.px(280),
             )
             title_label.pack(fill="x")
             title_label.bind("<Configure>", fit)
             if caption:
                 caption_label = tk.Label(
-                    box, text=caption, bg=T.SURFACE, fg=T.TEXT_MUTED,
-                    font=T.TYPE_CAPTION, anchor="w", justify="left",
+                    box,
+                    text=caption,
+                    bg=T.SURFACE,
+                    fg=T.TEXT_MUTED,
+                    font=T.TYPE_CAPTION,
+                    anchor="w",
+                    justify="left",
                     wraplength=T.px(280),
                 )
                 caption_label.pack(fill="x", pady=(T.px(T.SPACE_1), 0))
@@ -3717,9 +3891,7 @@ class Application:
         self.timer_box.pack(fill="x", pady=(T.px(T.FIELD_GAP), 0))
         self.timer_box.wheel_guard = lambda: self.display.get("wheel_controls", False)
 
-        count_col = column(
-            1, 1, self.tr("题目数量（不足时使用所有匹配题目；顺序随机）")
-        )
+        count_col = column(1, 1, self.tr("题目数量（不足时使用所有匹配题目；顺序随机）"))
         self.count_box = modern.Stepper(count_col, textvariable=self.count, maximum=20)
         self.count_box.pack(fill="x", pady=(T.px(T.FIELD_GAP), 0))
         self.count_box.bind("<KeyRelease>", self.show_count)
@@ -3728,8 +3900,12 @@ class Application:
 
         self._match_count = 0
         self.available = tk.Label(
-            host, text="", bg=T.SURFACE, fg=T.TEXT_SECONDARY,
-            font=T.TYPE_CAPTION, anchor="w",
+            host,
+            text="",
+            bg=T.SURFACE,
+            fg=T.TEXT_SECONDARY,
+            font=T.TYPE_CAPTION,
+            anchor="w",
         )
         self.available.pack(fill="x", pady=(T.px(T.GROUP_GAP), 0))
         tk.Frame(host, bg=T.SURFACE).pack(fill="both", expand=True)
@@ -3740,13 +3916,19 @@ class Application:
         actions = tk.Frame(footer, bg=T.SURFACE)
         actions.pack(fill="x")
         self.start_button = modern.SoftButton(
-            actions, text=self.tr("开始练习"), command=self.start_configured,
-            variant="primary", width=T.px(180),
+            actions,
+            text=self.tr("开始练习"),
+            command=self.start_configured,
+            variant="primary",
+            width=T.px(180),
         )
         self.start_button.pack(side="left")
         modern.SoftButton(
-            actions, text=self.tr("返回首页"), command=self.home,
-            variant="secondary", width=T.px(120),
+            actions,
+            text=self.tr("返回首页"),
+            command=self.home,
+            variant="secondary",
+            width=T.px(120),
         ).pack(side="right")
 
         self.refresh_filters()
@@ -4166,7 +4348,9 @@ class Application:
         if selected and self.answer.get() == selected:
             self._fill_option(frame, T.SELECTED_BG, T.PRIMARY)
             return
-        self._fill_option(frame, T.HOVER if entering else T.SURFACE, T.PRIMARY if entering else T.BORDER)
+        self._fill_option(
+            frame, T.HOVER if entering else T.SURFACE, T.PRIMARY if entering else T.BORDER
+        )
 
     def _paint_options(self, submitted=False, correct=False):
         chosen = self.answer.get()
@@ -4226,9 +4410,7 @@ class Application:
         split.columnconfigure(1, weight=1, uniform="quiz_split")
         split.rowconfigure(0, weight=1)
         self.question_shell = ttk.Frame(split, style="App.TFrame")
-        self.question_shell.grid(
-            row=0, column=0, sticky="nsew", padx=(0, T.px(T.SPACE_3))
-        )
+        self.question_shell.grid(row=0, column=0, sticky="nsew", padx=(0, T.px(T.SPACE_3)))
         self.question_content(engine.current, selectable=True, parent=self.question_shell)
         self._quiz_ai_panel(split)
         self.answer.trace_add("write", lambda *_: self._on_answer_changed())
@@ -4257,8 +4439,13 @@ class Application:
     def _circle_avatar(self, parent, size, bg=None):
         """Round assistant avatar instead of a square image tile."""
         canvas = tk.Canvas(
-            parent, width=size, height=size, bg=bg or T.SURFACE,
-            highlightthickness=0, bd=0, takefocus=0,
+            parent,
+            width=size,
+            height=size,
+            bg=bg or T.SURFACE,
+            highlightthickness=0,
+            bd=0,
+            takefocus=0,
         )
         try:
             photo = tk.PhotoImage(
@@ -4277,14 +4464,22 @@ class Application:
                 return
             gap = T.px(2)
             canvas.create_oval(
-                gap, gap, side - gap, side - gap,
-                fill=T.PRIMARY_SOFT, outline=T.PRIMARY, width=T.px(T.HAIRLINE),
+                gap,
+                gap,
+                side - gap,
+                side - gap,
+                fill=T.PRIMARY_SOFT,
+                outline=T.PRIMARY,
+                width=T.px(T.HAIRLINE),
             )
             if canvas._photo is not None:
                 canvas.create_image(side // 2, side // 2, image=canvas._photo)
             else:
                 canvas.create_text(
-                    side // 2, side // 2, text="✦", fill=T.PRIMARY,
+                    side // 2,
+                    side // 2,
+                    text="✦",
+                    fill=T.PRIMARY,
                     font=(FONT, max(12, side // 3), "bold"),
                 )
 
@@ -4307,16 +4502,27 @@ class Application:
         head = tk.Frame(panel, bg=T.SURFACE)
         head.grid(row=0, column=0, sticky="ew", pady=(0, T.px(T.SPACE_3)))
         tk.Label(
-            head, text=self.tr("问问 AI"), bg=T.SURFACE, fg=T.PRIMARY,
-            font=T.TYPE_HEADING, anchor="w",
+            head,
+            text=self.tr("问问 AI"),
+            bg=T.SURFACE,
+            fg=T.PRIMARY,
+            font=T.TYPE_HEADING,
+            anchor="w",
         ).pack(side="left")
         tk.Label(
-            head, text=self.tr("每题可询问一次"), bg=T.SURFACE, fg=T.TEXT_MUTED,
-            font=T.TYPE_CAPTION, anchor="e",
+            head,
+            text=self.tr("每题可询问一次"),
+            bg=T.SURFACE,
+            fg=T.TEXT_MUTED,
+            font=T.TYPE_CAPTION,
+            anchor="e",
         ).pack(side="right")
 
         bubble = modern.SoftPanel(
-            panel, fill=T.AI_REPLY_BG, edge=T.AI_REPLY_EDGE, padding=T.SPACE_4,
+            panel,
+            fill=T.AI_REPLY_BG,
+            edge=T.AI_REPLY_EDGE,
+            padding=T.SPACE_4,
         )
         bubble.grid(row=1, column=0, sticky="nsew")
         bubble.content.columnconfigure(0, weight=1)
@@ -4324,9 +4530,17 @@ class Application:
         self.quiz_ai_reply = AssistantReply(
             bubble.content,
             text=self.tr("点击下方向 AI 请求本题提示。"),
-            bg=T.AI_REPLY_BG, fg=T.TEXT_SECONDARY, font=T.TYPE_BODY,
-            wrap="word", width=1, relief="flat", height=9,
-            highlightthickness=0, bd=0, padx=0, pady=0,
+            bg=T.AI_REPLY_BG,
+            fg=T.TEXT_SECONDARY,
+            font=T.TYPE_BODY,
+            wrap="word",
+            width=1,
+            relief="flat",
+            height=9,
+            highlightthickness=0,
+            bd=0,
+            padx=0,
+            pady=0,
         )
         reply_scroll = ttk.Scrollbar(
             bubble.content, orient="vertical", command=self.quiz_ai_reply.yview
@@ -4626,7 +4840,12 @@ class Application:
                 font=(FONT, 13, "bold"),
             ).pack(anchor="w")
             tk.Label(
-                empty, text=self.tr(str(exc)), bg=T.SURFACE, fg=T.MUTED, wraplength=T.px(560), justify="left"
+                empty,
+                text=self.tr(str(exc)),
+                bg=T.SURFACE,
+                fg=T.MUTED,
+                wraplength=T.px(560),
+                justify="left",
             ).pack(anchor="w", pady=8)
             ttk.Button(
                 empty, text=self.tr("重新加载题库"), command=self.notebook, style="Accent.TButton"
@@ -4690,7 +4909,9 @@ class Application:
                 ).pack(anchor="w")
                 continue
             q = self.by_id[key]
-            tk.Label(panel, text=q.subject, bg=T.SURFACE, fg=T.PRIMARY, font=TYPE_HINT).pack(anchor="w")
+            tk.Label(panel, text=q.subject, bg=T.SURFACE, fg=T.PRIMARY, font=TYPE_HINT).pack(
+                anchor="w"
+            )
             self.question_content(q, parent=panel, art_width=360)
             tk.Label(
                 panel,
@@ -4774,7 +4995,11 @@ class Application:
             empty = card_frame(self.body, pad=16)
             empty.pack(fill="both", expand=True, pady=(0, T.px(T.SPACE_2)))
             tk.Label(
-                empty, text=self.tr("还没有学习记录"), bg=T.SURFACE, fg=T.TEXT, font=(FONT, 13, "bold")
+                empty,
+                text=self.tr("还没有学习记录"),
+                bg=T.SURFACE,
+                fg=T.TEXT,
+                font=(FONT, 13, "bold"),
             ).pack(anchor="w")
             tk.Label(
                 empty,
