@@ -46,6 +46,32 @@ class GuiTests(unittest.TestCase):
         self.app.submit_button.invoke()
         self.assertEqual(self.app.next_button.pack_info()["side"], "left")
 
+    def test_home_ai_card_uses_primary_tints_and_idle_portrait(self):
+        from learning_platform import ui_tokens as T
+
+        self.app.home()
+        self.root.update_idletasks()
+        self.assertEqual(self.app.home_ai_input.cget("bg"), T.AI_INPUT_BG)
+        self.assertEqual(self.app.home_ai_reply.cget("bg"), T.AI_REPLY_BG)
+        previous = T.theme_name()
+        try:
+            for theme in ("light", "dark"):
+                T.set_theme(theme)
+                self.assertNotEqual(T.AI_INPUT_BG, T.HOVER)
+                self.assertNotEqual(T.AI_REPLY_BG, T.HOVER)
+                self.assertNotEqual(T.AI_REPLY_BG, T.SURFACE)
+        finally:
+            T.set_theme(previous)
+        self.assertEqual(self.app._home_ai_idle.winfo_manager(), "pack")
+        self.assertEqual(self.app._home_ai_answer.winfo_manager(), "")
+        self.assertIsNotNone(self.app._home_mascot_base())
+        self.assertGreaterEqual(int(self.app._home_mascot.cget("width")), T.px(64))
+        self.app.home_ai_reply.configure(text="Hint text")
+        self.assertEqual(self.app._home_ai_idle.winfo_manager(), "")
+        self.assertEqual(self.app._home_ai_answer.winfo_manager(), "pack")
+        self.app.home_ai_reply.configure(text="")
+        self.assertEqual(self.app._home_ai_idle.winfo_manager(), "pack")
+
     def test_count_changes_update_start_label_immediately(self):
         self.app.configure()
         self.app.count.set("2")
@@ -139,6 +165,33 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(len(self.app.progress.load()["history"]), 2)
         self.root.update()
 
+    def test_question_art_fills_the_question_column(self):
+        from learning_platform.gui import art_factor
+
+        # Source art is 3x the design grid, so a 720px box needs one halving.
+        self.assertEqual(art_factor(1440, 810, 720, 420), 2)
+        self.assertEqual(art_factor(480, 270, 720, 420), 1)
+        self.root.deiconify()
+        self.root.geometry("1200x800")
+        self.app.start_quiz(self.app.questions[:1])
+        self.root.update()
+        column = self.app.question_shell.winfo_width()
+        photos = []
+
+        def walk(widget):
+            for child in widget.winfo_children():
+                photo = getattr(child, "_fit_photo", None)
+                if photo is not None:
+                    photos.append(photo)
+                walk(child)
+
+        walk(self.app.question_shell)
+        self.assertTrue(photos)
+        self.assertGreaterEqual(photos[0].width(), column * 0.55)
+        self.assertLessEqual(photos[0].width(), column)
+        # Regression guard: the old fixed 480x220 cap shrank art to half size.
+        self.assertGreater(photos[0].width(), 240)
+
     def test_missing_and_invalid_images_fall_back(self):
         self.app.show_image("assets/missing.png")
         self.app.show_image("data/questions/english.json")
@@ -146,7 +199,10 @@ class GuiTests(unittest.TestCase):
         labels = [
             w.cget("text") for w in self.app.body.winfo_children() if isinstance(w, ttk.Label)
         ]
-        self.assertEqual(sum("图片无法显示" in str(text) for text in labels), 3)
+        # Assertion stays valid in either locale: derive the lead-in from the catalog.
+        marker = self.app.tr("图片无法显示：{0}\n{1}", "", "").splitlines()[0]
+        marker = marker.replace("：", ":").split(":")[0]
+        self.assertEqual(sum(marker in str(text) for text in labels), 3)
 
     def test_missing_question_in_notebook(self):
         q = self.app.questions[0]
@@ -191,9 +247,9 @@ class GuiTests(unittest.TestCase):
         self.app.password_toggle.invoke()
         self.assertEqual(self.app.password_entries[0].cget("show"), "•")
         self.app.login_button.invoke()
-        self.assertIn("请输入用户名", self.app.login_error.cget("text"))
+        self.assertIn(self.app.tr("请输入用户名"), self.app.login_error.cget("text"))
         self.app.login_page(True)
-        self.assertIn("注册并进入", self.app.login_button.cget("text"))
+        self.assertIn(self.app.tr("注册并进入"), self.app.login_button.cget("text"))
         self.root.geometry("700x620")
         self.root.update()
         self.app._layout_login()

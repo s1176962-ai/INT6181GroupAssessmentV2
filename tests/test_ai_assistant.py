@@ -4,8 +4,19 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from learning_platform.ai_assistant import SYSTEM_PROMPT, AiAssistant, AiSettings, question_message
+from learning_platform.ai_assistant import (
+    SYSTEM_PROMPT,
+    SYSTEM_PROMPT_EN,
+    AiAssistant,
+    AiSettings,
+    question_message,
+    system_prompt,
+)
 from learning_platform.models import Question
+
+
+def has_chinese(text):
+    return any("\u4e00" <= char <= "\u9fff" for char in text)
 
 
 class AiAssistantTests(unittest.TestCase):
@@ -37,6 +48,53 @@ class AiAssistantTests(unittest.TestCase):
         self.assertIn("A. Root", message)
         self.assertNotIn("Roots absorb water", message)
         self.assertNotIn("assets/secret.png", message)
+
+    def test_english_mode_uses_an_english_prompt_and_question(self):
+        """Switching the UI to English must not leak Chinese into AI output."""
+        self.assertEqual(system_prompt("en"), SYSTEM_PROMPT_EN)
+        self.assertEqual(system_prompt("zh"), SYSTEM_PROMPT)
+        self.assertFalse(has_chinese(SYSTEM_PROMPT_EN))
+        message = question_message(self.question(), "en")
+        self.assertIn("Which part absorbs water?", message)
+        self.assertIn("A. Root", message)
+        self.assertNotIn("Roots absorb water", message)
+        self.assertNotIn("assets/secret.png", message)
+        self.assertFalse(has_chinese(message))
+
+        settings = MagicMock()
+        settings.load.return_value = {
+            "endpoint": "https://api.deepseek.com/chat/completions",
+            "model": "deepseek-chat",
+            "api_key": "secret",
+        }
+        response = MagicMock()
+        response.read.return_value = json.dumps(
+            {"choices": [{"message": {"content": "Start with the subject."}}]}
+        ).encode()
+        response.__enter__.return_value = response
+        with patch(
+            "learning_platform.ai_assistant.urllib.request.urlopen", return_value=response
+        ) as call:
+            AiAssistant(settings).ask("Help me solve it", language="en")
+        payload = json.loads(call.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["messages"][0]["content"], SYSTEM_PROMPT_EN)
+        self.assertEqual(payload["messages"][1]["content"], "Help me solve it")
+
+    def test_english_validation_errors_are_english(self):
+        assistant = AiAssistant(MagicMock())
+        for message in ("", "x" * (AiAssistant.MAX_INPUT_CHARS + 1)):
+            with self.subTest(message_length=len(message)):
+                with self.assertRaises(ValueError) as caught:
+                    assistant.ask(message, language="en")
+                self.assertFalse(has_chinese(str(caught.exception)))
+        assistant.settings.load.return_value = {
+            "endpoint": "https://api.deepseek.com/chat/completions",
+            "model": "deepseek-chat",
+            "api_key": "",
+        }
+        with self.assertRaises(ValueError) as caught:
+            assistant.ask("Explain this", language="en")
+        self.assertFalse(has_chinese(str(caught.exception)))
 
     def test_key_is_not_stored_as_plain_text(self):
         settings = AiSettings(self.folder)

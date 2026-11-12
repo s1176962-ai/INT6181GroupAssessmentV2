@@ -158,6 +158,13 @@ class LanguageTests(unittest.TestCase):
         self.folder = Path(temp.name)
         self.tr = Translator(self.folder)
 
+    def test_new_profile_starts_in_english(self):
+        """The initial language is English; do not silently switch to Chinese."""
+        self.assertEqual(self.tr.language, "en")
+        self.assertEqual(self.tr.store.read()["language"], "en")
+        self.assertEqual(self.tr("开始练习"), "Start a quiz")
+        self.assertEqual(Translator(Path(tempfile.mkdtemp())).language, "en")
+
     def test_save_reload_and_preserve_question_text(self):
         self.tr.set_language("en")
         tr = Translator(self.folder)
@@ -280,7 +287,8 @@ class RoleGuiTests(unittest.TestCase):
         QuizEngine([q], ProgressRepository(self.app.auth.progress_path(created))).submit(q.answer)
         page.table.selection_set(created["id"])
         page.details()
-        self.assertTrue(any("完成练习：1" in text for text in self.texts()))
+        summary = self.app.tr("完成练习：{0} 次；待复习错题：{1} 道。", 1, 0)
+        self.assertTrue(any(summary in text for text in self.texts()))
         page.show_list()
         page.table.selection_set(created["id"])
         page.edit_selected()
@@ -339,6 +347,98 @@ class RoleGuiTests(unittest.TestCase):
         page.preview()
         windows = [w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)]
         self.assertIn(f"A: {q.options[0]}", self.texts(windows[-1]))
+
+    def all_texts(self, root):
+        """Include Canvas-drawn labels (segmented control, soft buttons, cards)."""
+        values = []
+        for widget in root.winfo_children():
+            try:
+                text = str(widget.cget("text"))
+                if text.strip():
+                    values.append(text)
+            except tk.TclError:
+                pass
+            if isinstance(widget, tk.Canvas):
+                for item in widget.find_all():
+                    if widget.type(item) == "text":
+                        values.append(str(widget.itemcget(item, "text")))
+            values.extend(self.all_texts(widget))
+        return values
+
+    def assert_no_chinese(self, root):
+        for text in self.all_texts(root):
+            for char in text:
+                self.assertFalse("\u4e00" <= char <= "\u9fff", f"Chinese leaked: {text!r}")
+
+    def test_english_configure_and_quiz_assistant_have_no_chinese(self):
+        self.app.tr.set_language("en")
+        self.app.enter_guest()
+        self.app.configure()
+        self.root.update()
+        self.assertEqual(self.app.tr.language, "en")
+        self.assertEqual(self.app._difficulty_label("easy"), "Easy")
+        self.assertEqual(self.app._difficulty_label("medium"), "Medium")
+        self.assertEqual(self.app._difficulty_label("hard"), "Hard")
+        self.assertEqual(self.app._difficulty_label(self.app.tr("全部")), "All")
+        self.assert_no_chinese(self.app.body)
+
+        self.app.start_quiz(self.app.questions[:1])
+        self.root.update()
+        self.assertTrue(self.app.quiz_ai_button.winfo_exists())
+        self.assertTrue(self.app.quiz_ai_reply.winfo_exists())
+        # Vertical stack: the reply row is weighted, so it grows with the window.
+        self.assertEqual(
+            self.app.quiz_ai_panel.grid_rowconfigure(1)["weight"], 1
+        )
+        self.assert_no_chinese(self.app.quiz_ai_panel)
+
+    def test_quiz_ai_request_follows_the_ui_language(self):
+        """An English screen must send an English prompt and ask for English."""
+        self.app.tr.set_language("en")
+        self.app.enter_guest()
+        self.app.configure()
+        self.root.update()
+        self.app.start_quiz(self.app.questions[:1])
+        self.root.update()
+
+        class SyncThread:
+            def __init__(self, target=None, daemon=None):
+                self.target = target
+
+            def start(self):
+                self.target()
+
+        with (
+            patch("learning_platform.gui.threading.Thread", SyncThread),
+            patch.object(self.app.ai_assistant, "ask", return_value="English hint") as mocked,
+        ):
+            self.app.ask_current_question_ai()
+            self.root.update()
+        args, kwargs = mocked.call_args
+        self.assertEqual(args[1] if len(args) > 1 else kwargs["language"], "en")
+        # Framing instructions are English; the stem/options are question-bank
+        # content and may legitimately contain Chinese (ENG001 does).
+        lines = args[0].splitlines()
+        self.assertEqual(lines[0], "Help me understand this multiple-choice question.")
+        self.assertTrue(lines[1].startswith("Question: "))
+        self.assertIn("Options:", lines)
+        self.assertEqual(
+            lines[-1],
+            "Give a short hint first, then briefly analyse each option. Answer in English.",
+        )
+        for line in (lines[0], lines[1].split(": ", 1)[0], lines[-1]):
+            self.assertFalse(any("\u4e00" <= char <= "\u9fff" for char in line))
+
+    def test_question_bank_and_user_tables_grow_with_viewport(self):
+        self.app.tr.set_language("en")
+        self.enter(self.admin)
+        self.app.manage_questions()
+        self.root.update()
+        self.assertEqual(self.app.editor.table.master.grid_rowconfigure(0)["weight"], 1)
+        self.app.manage_users()
+        self.root.update()
+        self.assertEqual(self.app.users_page.table.winfo_manager(), "pack")
+        self.assertEqual(self.app.users_page.table.pack_info()["fill"], "both")
 
 
 if __name__ == "__main__":

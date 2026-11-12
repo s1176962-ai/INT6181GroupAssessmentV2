@@ -8,8 +8,9 @@ from uuid import uuid4
 
 from .maintenance import QuestionEditor, import_image
 from .models import Question, option_label
-from .services import image_path
-from .ui_tokens import BG, FONT, TEXT
+from . import modern
+from . import ui_tokens as T
+from .ui_tokens import FONT
 
 
 class EditorPage:
@@ -38,13 +39,13 @@ class EditorPage:
         )
         app._nav_key = "questions"
         app.clear(self.tr("题库中心"), show_heading=False, back=app.home)
-        heading = tk.Frame(app.body, bg=BG)
+        heading = tk.Frame(app.body, bg=T.BG)
         heading.pack(fill="x", pady=(0, 10))
         tk.Label(
             heading,
             text=self.tr("公共题库") if self.mode == "public" else self.tr("个人题库"),
-            bg=BG,
-            fg=TEXT,
+            bg=T.BG,
+            fg=T.TEXT,
             font=(FONT, 20, "bold"),
         ).pack(side="left")
         switcher = ttk.Frame(heading)
@@ -73,24 +74,26 @@ class EditorPage:
         self.search = tk.StringVar()
         self.subject = tk.StringVar(value=self.tr("全部"))
         ttk.Entry(bar, textvariable=self.search, width=28).pack(side="left", padx=4)
-        ttk.Combobox(
+        modern.Dropdown(
             bar,
             textvariable=self.subject,
-            state="readonly",
-            width=18,
             values=[self.tr("全部")] + sorted({q.subject for q in self.questions}),
-        ).pack(side="left", padx=4)
+            width=T.px(180),
+        ).pack(side="left", padx=T.px(T.SPACE_1))
         ttk.Button(bar, text=self.tr("搜索 / 筛选"), command=self.refresh_list).pack(
             side="left", padx=4
         )
         table_frame = ttk.Frame(app.body)
         table_frame.pack(fill="both", expand=True)
         table_frame.columnconfigure(0, weight=1)
+        # Without a weighted row the Treeview keeps its 10-row requested height
+        # even though the frame itself expands, leaving a large dead area below.
+        table_frame.rowconfigure(0, weight=1)
         self.table = ttk.Treeview(
             table_frame,
             columns=("id", "subject", "topic", "difficulty", "text"),
             show="headings",
-            height=10,
+            height=18,
             selectmode="browse",
         )
         for column, title, width in [
@@ -101,7 +104,12 @@ class EditorPage:
             ("text", self.tr("题干"), 300),
         ]:
             self.table.heading(column, text=title)
-            self.table.column(column, width=width, minwidth=50)
+            # Scale with DPI: fonts grow at 125/150% but a fixed pixel width
+            # would clip "Difficulty" / "Mathematics" / "Vocabulary".
+            # Let the question text absorb the extra width on a maximized window.
+            self.table.column(
+                column, width=T.px(width), minwidth=T.px(50), stretch=column == "text"
+            )
         self.table.grid(row=0, column=0, sticky="nsew")
         scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.table.yview)
         horizontal = ttk.Scrollbar(table_frame, orient="horizontal", command=self.table.xview)
@@ -225,10 +233,12 @@ class EditorPage:
             var = tk.StringVar(value=data[key])
             self.fields[key] = var
             choices = sorted({getattr(q, key) for q in self.questions}) if key != "id" else []
-            entry = ttk.Combobox(app.body, textvariable=var, values=choices, width=42)
+            entry = modern.Dropdown(
+                app.body, textvariable=var, values=choices, width=T.px(320)
+            )
             if key == "id" and question:
                 entry.state(["disabled"])
-            entry.pack(anchor="w")
+            entry.pack(anchor="w", pady=(T.px(T.FIELD_GAP), 0))
         app.label(self.tr("题干 *"))
         self.question_text = tk.Text(app.body, height=3, width=65, wrap="word")
         self.question_text.insert("1.0", data["question"])
@@ -319,18 +329,9 @@ class EditorPage:
     def render_image(self, parent, value, references):
         if not value:
             return
-        try:
-            photo = tk.PhotoImage(
-                master=self.app.root, file=str(image_path(self.app.project_root, value))
-            )
-            factor = max(1, (photo.width() + 479) // 480, (photo.height() + 219) // 220)
-            photo = photo.subsample(factor)
-            references.append(photo)
-            ttk.Label(parent, image=photo).pack(anchor="w", pady=4)
-        except (ValueError, tk.TclError, OSError) as exc:
-            ttk.Label(parent, text=self.tr("图片无法显示：{0}", exc), wraplength=500).pack(
-                anchor="w"
-            )
+        # Same pipeline as the quiz page: transparent 3x art, scaled to the
+        # parent's width, so the preview matches what students will see.
+        self.app.show_image(value, parent=parent, max_width=360)
 
     def preview_window(self, title):
         window = tk.Toplevel(self.app.root)

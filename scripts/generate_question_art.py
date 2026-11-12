@@ -23,6 +23,13 @@ RED = (194, 74, 74)
 SKY = (180, 210, 230)
 LEAF = (90, 160, 100)
 W, H = 480, 270
+# The painters below are written on a 480x270 design grid. Rendering happens at
+# SCALE times that grid so the PNGs are still crisp when the UI shows them at
+# 2-3x on a high-DPI screen (Tk can only subsample, never upscale smoothly).
+# SUPERSAMPLE is an extra pass that antialiases the vector edges; the canvas is
+# transparent so the illustration floats on whatever surface the page uses.
+SCALE = 3
+SUPERSAMPLE = 2
 
 
 def font(size: int):
@@ -36,11 +43,64 @@ def font(size: int):
     return ImageFont.load_default()
 
 
+class ScaledDraw:
+    """``ImageDraw`` proxy that maps the 480x270 design grid onto ``SCALE``x.
+
+    Every painter can keep using hand-tuned design coordinates while the output
+    is rasterised at full resolution, so strokes and captions stay sharp instead
+    of being a blurred upscale of a small bitmap.
+    """
+
+    BOX = {"ellipse", "rectangle", "rounded_rectangle", "arc", "chord", "pieslice"}
+    FLAT = {"line", "text", "multiline_text"}
+
+    def __init__(self, draw, scale: int):
+        self._draw = draw
+        self._scale = scale
+
+    def __getattr__(self, name):
+        target = getattr(self._draw, name)
+        if not callable(target):
+            return target
+
+        def call(*args, **kwargs):
+            return self._dispatch(name, target, args, kwargs)
+
+        return call
+
+    def _s(self, value):
+        return value * self._scale
+
+    def _dispatch(self, name, target, args, kwargs):
+        args = list(args)
+        if args:
+            first = args[0]
+            if name in self.BOX:
+                args[0] = tuple(self._s(v) for v in first)
+            elif name in self.FLAT:
+                args[0] = tuple(self._s(v) for v in first)
+            elif name == "polygon":
+                args[0] = tuple((self._s(x), self._s(y)) for x, y in first)
+        for key in ("width", "radius"):
+            value = kwargs.get(key)
+            if isinstance(value, int):
+                kwargs[key] = self._s(value)
+        size = getattr(kwargs.get("font"), "size", None)
+        if isinstance(size, int):
+            kwargs["font"] = font(max(1, self._s(size)))
+        return target(*args, **kwargs)
+
+
 def canvas():
-    img = Image.new("RGB", (W, H), BG)
-    draw = ImageDraw.Draw(img)
+    layers = SCALE * SUPERSAMPLE
+    img = Image.new("RGBA", (W * layers, H * layers), (0, 0, 0, 0))
+    draw = ScaledDraw(ImageDraw.Draw(img), layers)
     draw.rounded_rectangle(
-        (16, 16, W - 16, H - 16), radius=24, fill=SURFACE, outline=(228, 223, 212), width=2
+        (16, 16, W - 16, H - 16),
+        radius=24,
+        fill=SURFACE,
+        outline=(228, 223, 212),
+        width=2,
     )
     return img, draw
 
@@ -48,7 +108,7 @@ def canvas():
 def save(img: Image.Image, qid: str) -> str:
     OUT.mkdir(parents=True, exist_ok=True)
     rel = f"assets/images/questions/{qid}.png"
-    img.save(ROOT / rel, "PNG")
+    img.resize((W * SCALE, H * SCALE), Image.LANCZOS).save(ROOT / rel, "PNG")
     return rel
 
 

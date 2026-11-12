@@ -2,7 +2,7 @@
 
 import tkinter as tk
 
-from .ui_tokens import BG, ERROR, PRIMARY, SUCCESS_BG, SUCCESS_FG, SURFACE
+from . import ui_tokens as T
 
 
 class Motion:
@@ -57,12 +57,13 @@ class Motion:
         if not self.active() or not host.winfo_exists():
             return
         self._drop_overlay()
-        overlay = tk.Frame(host, bg=BG)
+        overlay = tk.Frame(host, bg=T.BG)
         overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
         self._overlay = overlay
         self.schedule(duration, self._drop_overlay)
 
-    def circle_transition(self, host, callback, x=None, y=None, color=SUCCESS_BG):
+    def circle_transition(self, host, callback, x=None, y=None, color=None):
+        color = color or T.SUCCESS_BG
         if not self.active() or not host.winfo_exists():
             callback()
             return
@@ -72,7 +73,7 @@ class Motion:
         height = max(host.winfo_height(), 1)
         cx = width // 2 if x is None else x
         cy = height // 2 if y is None else y
-        overlay = tk.Canvas(host, bg=BG, highlightthickness=0, bd=0)
+        overlay = tk.Canvas(host, bg=T.BG, highlightthickness=0, bd=0)
         overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
         self._overlay = overlay
         max_radius = int((width**2 + height**2) ** 0.5) + 40
@@ -138,8 +139,8 @@ class Motion:
             parent = near.nametowidget(near.winfo_parent())
         except tk.TclError:
             return
-        color = SUCCESS_FG if ok else ERROR
-        canvas = tk.Canvas(parent, width=120, height=48, bg=BG, highlightthickness=0, bd=0)
+        color = T.SUCCESS_FG if ok else T.ERROR
+        canvas = tk.Canvas(parent, width=120, height=48, bg=T.BG, highlightthickness=0, bd=0)
         canvas.place(in_=near, relx=0.5, rely=0, anchor="s")
         self._overlay = canvas
         dots = []
@@ -219,7 +220,7 @@ class Motion:
         for index in range(total):
             x = pad + span * index / max(total - 1, 1)
             filled = index < current or (done and index < total)
-            color = PRIMARY if filled else "#D8D2C6"
+            color = T.PRIMARY if filled else T.BORDER
             if index < total - 1:
                 x2 = pad + span * (index + 1) / max(total - 1, 1)
                 canvas.create_line(
@@ -227,7 +228,7 @@ class Motion:
                     y,
                     x2 - 7,
                     y,
-                    fill=PRIMARY if index < current - (0 if done else 1) else "#D8D2C6",
+                    fill=T.PRIMARY if index < current - (0 if done else 1) else T.BORDER,
                     width=3,
                 )
             canvas.create_oval(
@@ -235,7 +236,7 @@ class Motion:
                 y - 7,
                 x + 7,
                 y + 7,
-                fill=SURFACE if not filled else PRIMARY,
+                fill=T.SURFACE if not filled else T.PRIMARY,
                 outline=color,
                 width=2,
             )
