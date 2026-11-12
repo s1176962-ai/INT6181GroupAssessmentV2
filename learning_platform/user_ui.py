@@ -3,6 +3,8 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+from . import ui_tokens as T
+
 
 class UserPage:
     def __init__(self, app):
@@ -23,20 +25,21 @@ class UserPage:
             self.tr("管理员可查看学习数据、修改账号、重置密码、停用登录或调整角色。密码不会显示。")
         )
         frame = ttk.Frame(app.body)
-        frame.pack(fill="x")
+        frame.pack(fill="both", expand=True)
         self.table = ttk.Treeview(
-            frame, columns=("name", "role", "status"), show="headings", height=12
+            frame, columns=("name", "role", "status"), show="headings", height=18
         )
-        for key, title in [
-            ("name", self.tr("用户名")),
-            ("role", self.tr("角色")),
-            ("status", self.tr("状态")),
+        for key, title, width in [
+            ("name", self.tr("用户名"), 220),
+            ("role", self.tr("角色"), 180),
+            ("status", self.tr("状态"), 140),
         ]:
             self.table.heading(key, text=title)
+            self.table.column(key, width=T.px(width), minwidth=T.px(100), stretch=True)
         scroll = ttk.Scrollbar(frame, orient="vertical", command=self.table.yview)
         self.table.configure(yscrollcommand=scroll.set)
         scroll.pack(side="right", fill="y")
-        self.table.pack(fill="x")
+        self.table.pack(fill="both", expand=True)
         self.users = {user["id"]: user for user in users}
         for user in users:
             self.table.insert(

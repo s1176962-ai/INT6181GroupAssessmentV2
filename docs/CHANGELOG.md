@@ -1,5 +1,56 @@
 # 变更记录
 
+## 答题对战 · 2026-11-12
+
+- 增加所有角色可见的对战入口、四档模拟对手、同题倒计时和分项计分。
+- 独立 battle/battle_ui 模块沿用主题令牌、圆角卡片与自绘选项按钮。
+- Local/API 双提供者接口，API 复用现有客户端配置，后台请求并验证返回结果。
+- 增加计分边界、超时与对手概率配置测试，完整回归 94 项通过。
+
+## v2.7 题目插图放大：3 倍分辨素材 + 按列宽自适应 · 2026-11-11
+
+- 根因：`show_image()` 的缩放上限是 480×220 设备像素，而所有题目素材都是 480×270——高度上限一项就迫使 `subsample(2)`，插图实际只有 240×135，在高 DPI 下相对文字显得很小。
+- 素材：`scripts/generate_question_art.py` 保留 480×270 设计坐标，新增 `ScaledDraw` 代理把绘制调用映射到 `SCALE=3`（1440×810），再按 `SUPERSAMPLE=2` 渲染后 LANCZOS 降采样，线宽与文案都是最终分辨率直出，不再是放大糊图；画布改 RGBA，四周留白透明，插图卡片可直接浮在任意底色上。
+- 尺寸：`show_image()` → `_fit_image()` 按宿主列宽挑「放得下的最清晰整数降采样」（列宽 −16px、高度上限 420 设计 px），并把结果按 factor 缓存在 label 上；宿主 `<Configure>` 时重算，顺便修正新建答题列宽为 1 的首帧。答题页 150% 下 720×405（约占列宽 70%，是原来的 2 倍），100% 下 720×405，窄窗口自动退到 480/360。
+- 融合：`PhotoImage` 的 alpha 会与控件背景合成，因此图片容器改用 `tk.Frame/tk.Label` 并从宿主取底色（`_blend_color()`，先经典 `bg` 再 ttk 样式查表），避免深色主题下出现亮色方块。
+- 错题本与题目编辑器预览通过 `max_width=360` 保持紧凑；编辑器 `render_image()` 改为复用同一条管线，删除重复的固定缩放逻辑。
+- 内存：只有屏上显示的那一份图进 `Application.images`，1440×810 原图随 label 生命周期释放。
+- 新增回归 `test_question_art_fills_the_question_column`（factor 计算 + 实测插图 ≥55% 且 ≤100% 列宽）；共 **92 项全通过**。验收截图 `.workbuddy-ai/preview/v4-*.png`（`.workbuddy-ai/capture_quiz_art.py` 可复现）。
+
+## v2.6 首页 Ask AI 卡片重做：主色系语义色 + 自适应 Q 版立绘 · 2026-11-11
+
+- 新增语义色令牌 `AI_INPUT_BG` / `AI_INPUT_EDGE` / `AI_REPLY_BG` / `AI_REPLY_EDGE`，替换原来借用的中性灰 `HOVER`。浅色下回复区是主色浅底的 72% 叠加，深色下 `PRIMARY_SOFT` 与表面过近，改用 `mix(surface, primary, 0.10)` 保证面板可见。
+- 新增 `modern.SoftPanel`：无阴影的圆角着色面板，可选 1px 描边并支持聚焦时把描边换成主色（输入区焦点态）。
+- 首页「问问 AI」重做（`_build_home_ai()`）：标题（主色圆点 + Ask AI）→ 输入面板（两行文本域 + 面板内发送按钮 + Enter 提示行）→ 回复面板占满剩余高度。输入框 Enter 发送、Shift+Enter 换行，发送成功后清空、失焦恢复占位符。
+- Q 版形象改为回复区空闲态立绘：按面板实际 `<Configure>` 尺寸自适应放大（上限 320 设计 px），用整数 `PhotoImage.subsample` 缩放，不引入 Pillow 依赖；形象与问候语作为整体居中，面板过矮（立绘 < 120px）时自动隐藏问候语，避免文字被裁。
+- `AssistantReply` 增加 `on_text` 钩子：首次出现状态/回复时隐藏立绘、显示「AI 提示 + 正文」，清空文本时恢复立绘。
+- 答题页 `_quiz_ai_panel()` 同步换成 `AI_REPLY_BG` / `AI_REPLY_EDGE`，与首页保持同一套视觉语言。
+- 新增回归 `test_home_ai_card_uses_primary_tints_and_idle_portrait`（主色令牌≠HOVER、两套主题、空闲/回复两态切换、立绘已加载）；共 **91 项全通过**。
+- 文档：`DESIGN.md` v2.6（新增 v2_6_home_ai 章节）、`README.md` 同步。验收截图 `.workbuddy-ai/preview/final2-home-*.png`（`.workbuddy-ai/capture_ai_card.py` 可复现）。
+
+## v2.5 答题页 Ask AI 上下结构、英文纯净度与列表页撑满 · 2026-11-11
+
+- 答题页 `show_question()` 改为 50/50 两列 + 加权行，两侧都随视口高度拉伸；新增 `_quiz_ai_panel()` 把原来「回复在左、头像和按钮在右」的短卡片改成上下结构：标题与「每题可询问一次」说明 → 全宽可伸缩回复气泡 → 圆形头像 + 宽幅自绘按钮（按钮文案同时承担「Asked for this question」状态）。每题一次询问的锁定逻辑不变。
+- `ai_assistant.py` 新增 `SYSTEM_PROMPTS = {zh, en}` 与 `system_prompt()`；英文控制词强制 **ALWAYS answer in English**。`AiAssistant.ask(message, language)`、`question_message(question, language)` 接收界面语言，`gui.py:_request_ai()` / `ask_current_question_ai()` 统一传 `self.tr.language`；校验与网络错误也双语化。英文界面下 AI 回复固定英文，即使题干/选项含中文。
+- 难度可见标签改为 i18n 键（`_difficulty_label()`），英文模式显示 `All / Easy / Medium / Hard`；配置页右上角摘要不再出现「全部」。语言选项「简体中文」在英文模式显示 `Simplified Chinese`。`en.json` 补 13 条词条。
+- 修复列表页空白：题库管理与用户管理 `Treeview` 所在 grid 行补 `rowconfigure(0, weight=1)`，基础行数 10/12 → 18，末列 `stretch=True`；所有列宽改经 `T.px()`，修掉 150% DPI 下 `Diffic…` / `Mathemati…` / `Vocabular…` 截断。导入预览表同步缩放。
+- 配置练习页 `SoftCard` 改为 `fill="both", expand=True`，用弹性 spacer 把 footer 固定在卡片底部，消除卡片下方大块空白；错题本/学习历史的空状态卡片同样撑满视口。
+- 新增回归：AI 英文提示词/英文提问/英文报错、英文界面中文残留扫描（含 Canvas 自绘文字）、Ask AI 加权行、两张表格拉伸、AI 请求语言链路；共 **90 项全通过**。
+- 文档：`DESIGN.md` v2.5、`README.md`、`docs/AI_ASSISTANT_PROMPT.md` 同步。验收截图 `.workbuddy-ai/preview/v25-*.png`（`.workbuddy-ai/capture_v25.py` 可复现）。
+- 说明：题库题干与选项属于数据而非界面文案，ENG001 等英语词汇题的选项本身是中文，按 SRS「题库内容保留原文」不翻译。
+
+## v2.4 布局与高 DPI 显示修复 · 2026-11-11
+
+- 两个启动入口（`launcher.py`、`gui.main()`）新增 `maximize_startup()`，Windows 用 `root.state("zoomed")` 默认最大化；`start.bat`、`main.py`、`python -m learning_platform` 全部继承。
+- 滚动画布的 body 窗口改为按视口高度拉伸，首页四卡在最大化窗口下铺满页面，消除下方大片空白；首页卡片内距统一为 `T.SPACE_5`(24)，内部间距全部经 `T.px()` 缩放。
+- 修复 `_strip_focus()` 回归：clam 主题把 `Radiobutton.label` / `Checkbutton.label` 嵌在 `.focus` 节点内，旧实现删整节点导致设置页单选项只剩圆点；现在提升子节点再删焦点框。
+- 移除全项目写死的 `wraplength` 常量，改为 `<Configure>` 事件按控件真实宽度自适应（`label()`、设置页 `fit()`、配置页列 helper），修复高 DPI 下说明文字挤成窄列、登录页工具栏被裁成 `gh n`、首页空状态文案被截尾。
+- 登录页表单加宽（`CARD_WIDTH` 420 → 520 设计 px）、标题升级 `TYPE_HERO`、表单列居中留白，改用圆角柔和阴影卡片；学科标题与表单间距按 8pt 栅格放大。
+- 设置页分区内距统一 24、说明文字铺满卡片宽度，外观/语言/动画分组改为整行呼吸感布局。
+- 默认初始语言锁定为英文：`Translator` 新建配置 `{"language": "en"}`，`data/settings.json` 亦为 `en`，新增 `LanguageTests.test_new_profile_starts_in_english` 回归测试。
+- `DESIGN.md` 升级 v2.4 并补充布局/焦点/换行规则；`README.md` 同步启动、主题与测试数量说明。
+- 验证：`py -3 -m py_compile learning_platform/*.py launcher.py` 通过，`py -3 -m unittest discover -s tests` **85 项全通过**；`.workbuddy-ai/preview/full-dark-*-{125,150}.png` 与 `redesign-*.png` 截图重新采集，100/125/150% 均无裁切。
+
 ## 问问 AI · 2026-11-05
 
 - 设置页新增 DeepSeek 兼容接口、模型和加密 API Key 配置。
@@ -106,3 +157,15 @@
 
 
 答题页进度条固定在顶部标题栏下方；题号只在标题栏显示一次。中间仅滚动题目、选项和解析，底部操作栏固定。离开答题页时移除固定进度区域。
+
+
+## 2026-11-10 双主题、简约登录页与默认英文
+
+- `ui_tokens.py` 改为运行时可切换调色板（Lights Out 深色 / Daylight 浅色），新增 `THEMES`、`theme_name()`、`set_theme()` 及 NAV_BG、SCROLL_*、CHECK_*、RAISED 等令牌；颜色统一在渲染时通过 `T.<TOKEN>` 读取，去掉冻结调色板的直接导入与函数默认参数。
+- `Translator` 新建配置默认英文（`en`），新增 `set_theme()` 将主题写入 `data/settings.json`；已有配置保持原语言，损坏文件仍安全回退且不覆盖。
+- `Application.apply_theme()` 重绘 ttk 样式、重建侧边栏与当前页面；登录页工具栏、侧边栏底部和设置 → 外观三处均可切换，练习进行中切换保留引擎与已提交答案。补齐 `configure()` 的 `_nav_key`，保证练习页切换后重建正确页面。
+- 登录页删去几何插画、按学科假进度条和灰底统计卡，改为「字标 + 单句标题 + 细分隔线 + 一行题库事实」；表单增加主题入口，勾选框新增 `Card.TCheckbutton` 消除深色底块，长文案增加 wraplength，窗体宽度按实测文本自适应（高 DPI 不裁切）。
+- 首页**保持原 V2 四卡布局不变**（本轮只重设计登录页）。曾在同一次改造中尝试过极简首页，按用户要求已从备份恢复；恢复时把原 `home()` 的冻结色引用改为 `T.<TOKEN>` 以适配双主题，删除仅供极简版使用的 `_soft_card()`，并给「最近学习」空状态文案补 `wraplength`，避免默认英文下文字被裁切。深色进度轨道令牌由 `#161616` 改为可见的 `#343940`。
+- `en.json` 补齐外观/深色/浅色/主题说明 4 条词条；3 处测试断言改为语言无关（从词条推导期望文本），验证默认英文下 84 项回归全部通过。
+- `DESIGN.md` v2.2 同步双主题调色板并把简约规则限定在登录页；README 更新主题/默认语言说明、测试数量 54 → 84 与 `py -3` 运行命令。视觉对照截图见 `.workbuddy-ai/preview/`（不纳入版本库）。
+- 恢复后复验：`py -3 -m py_compile learning_platform/*.py` 通过，`py -3 -m unittest discover -s tests` 84 项全通过；深浅两套首页截图重新采集。
