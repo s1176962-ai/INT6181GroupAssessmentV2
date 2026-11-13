@@ -3,11 +3,11 @@
 Uses a temporary profile directory, so the user's data/settings.json is untouched.
 """
 import ctypes
+import ctypes.wintypes
 import sys
 import tempfile
 import time
 import tkinter as tk
-import ctypes.wintypes
 from pathlib import Path
 
 from PIL import ImageGrab
@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from learning_platform.gui import Application
+
 OUT = ROOT / ".workbuddy-ai" / "preview"
 OUT.mkdir(parents=True, exist_ok=True)
 

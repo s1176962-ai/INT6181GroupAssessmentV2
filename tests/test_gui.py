@@ -8,6 +8,11 @@ from tkinter import ttk
 from unittest.mock import patch
 
 from learning_platform.gui import Application
+from learning_platform.repositories import (
+    LearningPlanRepository,
+    PersonalQuestionRepository,
+    ProgressRepository,
+)
 
 
 class GuiTests(unittest.TestCase):
@@ -22,7 +27,42 @@ class GuiTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.app = Application(self.root, progress_path=Path(temp.name) / "progress.json")
         self.app.enter_guest()
+        user = self.app.auth.register("GuiTester", "Password1", "Password1")
+        self.app.user = user
+        self.app.progress = ProgressRepository(self.app.auth.progress_path(user))
+        self.app.personal_bank = PersonalQuestionRepository(
+            self.app.auth.personal_questions_path(user)
+        )
+        self.app.learning_plan = LearningPlanRepository(self.app.auth.learning_plan_path(user))
+        self.app.home()
         self.root.update()
+
+    def test_guest_cannot_open_notebook_or_history(self):
+        self.app.enter_guest()
+        with patch("learning_platform.gui.messagebox.showinfo") as info:
+            self.app.notebook()
+            self.app.history()
+        self.assertEqual(info.call_count, 2)
+        self.assertNotIn("notebook", self.app._nav_buttons)
+        self.assertNotIn("history", self.app._nav_buttons)
+
+    def test_late_valid_battle_decision_is_void_without_damage(self):
+        from learning_platform.battle import OpponentDecision
+
+        self.app.battle_page()
+        battle = self.app.battle
+        battle.start()
+        q = battle.questions[0]
+        battle.answer(q.answer)
+        decision = OpponentDecision(q.id, q.answer, 10, "A valid answer", "api")
+        battle.receive_decision(decision, None, 30.01)
+        self.assertIsNone(battle.decision)
+        self.assertIsNone(battle.planned)
+        battle.finish_round()
+        self.assertEqual((battle.player_hp, battle.ai_hp), (battle.max_hp, battle.max_hp))
+        self.assertEqual(battle.records, [])
+        self.assertEqual(battle.next.cget("text"), self.app.tr("重试本题"))
+        self.root.after_cancel(battle.timer_id)
 
     def test_battle_round_renders_question_portrait_and_options(self):
         self.app.battle_page()
@@ -32,11 +72,105 @@ class GuiTests(unittest.TestCase):
         self.assertTrue(battle.active)
         self.assertEqual(len(battle.buttons), len(battle.questions[0].options))
         self.assertTrue(battle.portrait.cget("image"))
+        battle.show_decision_stage(1)
+        text = battle.thinking_status.get("1.0", "end-1c")
+        self.assertIn("2 / 3", text)
+        self.assertNotIn("1 / 3", text)
+        self.assertNotIn("Decision saved", text)
         battle.answer(battle.questions[0].answer)
         self.assertEqual(battle.player.correct, 100)
         battle.active = False
         battle.generation += 1
         self.root.after_cancel(battle.timer_id)
+
+    def test_battle_api_failure_does_not_damage_or_score(self):
+        from learning_platform.battle import grade
+
+        self.app.battle_page()
+        battle = self.app.battle
+        battle.start()
+        battle.answer(battle.questions[0].answer)
+        battle.ai = grade(False, 31)
+        battle.decision_error = "Invalid JSON response"
+        battle.finish_round()
+        self.assertEqual((battle.player_hp, battle.ai_hp), (battle.max_hp, battle.max_hp))
+        self.assertEqual(battle.records, [])
+        self.assertEqual(battle.next.cget("text"), self.app.tr("重试本题"))
+        self.assertIn("Invalid JSON response", battle.thinking_status.get("1.0", "end-1c"))
+        battle.generation += 1
+        self.root.after_cancel(battle.timer_id)
+
+    def test_notebook_overflow_shows_scrollbar(self):
+        self.root.deiconify()
+        self.root.geometry("960x640")
+        data = self.app.progress.load()
+        for q in self.app.questions[:5]:
+            data["wrong"][q.id] = {
+                "count": 1,
+                "last_answer": q.options[0],
+                "last_seen": "2026-11-13T10:00:00+08:00",
+            }
+        self.app.progress.save(data)
+        self.app.notebook()
+        self.root.update()
+        self.assertTrue(self.app.scrollbar.winfo_ismapped())
+        self.app.canvas.yview_moveto(1)
+        self.root.update()
+        self.assertGreater(self.app.canvas.yview()[0], 0)
+
+    def test_text_only_question_and_feedback_keep_assistant_geometry(self):
+        from dataclasses import replace
+
+        self.root.deiconify()
+        self.root.geometry("1080x800")
+        self.app.motion.enabled = False
+        question = replace(self.app.questions[0], question_image=None, option_images=None)
+        self.app.start_quiz([question])
+        self.root.update()
+        self.assertEqual(self.app.images, [])
+        panel = self.app.quiz_ai_panel
+        before = (panel.winfo_rooty(), panel.winfo_height())
+        self.app.answer.set(question.answer)
+        with patch.object(self.app.ai_assistant, "ask") as request:
+            self.app.submit()
+            request.assert_not_called()
+        self.assertNotIn("Keep going", self.app.feedback.cget("text"))
+        self.root.update()
+        self.assertEqual((panel.winfo_rooty(), panel.winfo_height()), before)
+
+    def test_wrong_feedback_is_local_and_selected_option_has_short_label(self):
+        self.app.motion.enabled = False
+        question = self.app.questions[0]
+        self.app.start_quiz([question])
+        chosen = next(option for option in question.options if option != question.answer)
+        self.app.answer.set(chosen)
+        with patch.object(self.app.ai_assistant, "ask") as request:
+            self.app.submit()
+            request.assert_not_called()
+        self.assertEqual(self.app.option_status[chosen].cget("text"), self.app.tr("你的选择"))
+        feedback = self.app.feedback.cget("text")
+        self.assertNotIn(self.app.tr("再想一想"), feedback)
+        self.assertIn(question.answer, feedback)
+        self.assertIn(question.explanation, feedback)
+        self.assertTrue(feedback.startswith(self.app.tr("回答错误，已记入错题本。")))
+
+    def test_numeric_controls_accept_direct_editing(self):
+        self.app.configure()
+        timer = self.app.timer_box
+        timer.entry.delete(0, "end")
+        timer.entry.insert(0, "120")
+        self.assertEqual(self.app.timer_seconds.get(), "120")
+        timer._commit_entry()
+        self.assertEqual(timer.get(), "120")
+        count = self.app.count_box
+        count.entry.delete(0, "end")
+        count.entry.insert(0, "12")
+        self.assertEqual(self.app.count.get(), "12")
+        count.entry.insert("end", "abc")
+        self.assertEqual(count.get(), "12")
+        count._commit_entry()
+        self.app.start_configured()
+        self.assertEqual(len(self.app.engine.questions), 12)
 
     def test_subject_cards_and_primary_action_positions(self):
         self.app.home()
@@ -244,10 +378,12 @@ class GuiTests(unittest.TestCase):
     def test_empty_bank_and_corrupt_progress(self):
         self.app.questions = []
         self.app.configure()
+        self.app.progress.store.path.parent.mkdir(parents=True, exist_ok=True)
         self.app.progress.store.path.write_text("{bad", encoding="utf-8")
         self.app.home()
-        self.app.history()
-        self.app.notebook()
+        with patch("learning_platform.gui.messagebox.showerror"):
+            self.app.history()
+            self.app.notebook()
         with patch("learning_platform.gui.messagebox.showerror") as error:
             self.app.start_quiz([self.app.questions[0]])
             error.assert_called_once()

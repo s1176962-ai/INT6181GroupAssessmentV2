@@ -273,6 +273,27 @@ class RoleGuiTests(unittest.TestCase):
         self.assertIsNone(self.app.user)
         self.assertFalse(self.app.auth.progress_path(self.student).exists())
 
+    def test_personal_bank_moderation_opens_selected_owner(self):
+        from learning_platform.repositories import PersonalQuestionRepository
+
+        self.enter(self.admin)
+        repository = PersonalQuestionRepository(self.app.auth.personal_questions_path(self.student))
+        question = self.app.questions[0]
+        repository.save(question)
+        self.app.manage_users()
+        self.app.users_page.table.selection_set(self.student["id"])
+        self.app.users_page.personal_bank()
+        self.root.update()
+        page = self.app.editor
+        self.assertEqual(page.mode, "managed")
+        self.assertEqual(page.owner_id, self.student["id"])
+        self.assertEqual(page.questions, [question])
+        page.table.selection_set(question.id)
+        with patch("learning_platform.editor_ui.messagebox.askyesno", return_value=True):
+            page.delete_selected()
+        self.assertEqual(repository.all(), [])
+        self.assertEqual(self.app.editor.mode, "managed")
+
     def test_user_form_create_modify_disable_and_details(self):
         self.enter(self.admin)
         self.app.manage_users()
@@ -313,6 +334,7 @@ class RoleGuiTests(unittest.TestCase):
         self.assertIn("Register and continue", self.texts())
         self.assertEqual(Translator(self.folder / "data").language, "en")
         self.app.enter_guest()
+        self.enter(self.student)
         self.app.configure()
         self.assertEqual(self.app.topic.get(), "All")
         q = self.app.questions[0]
@@ -387,9 +409,7 @@ class RoleGuiTests(unittest.TestCase):
         self.assertTrue(self.app.quiz_ai_button.winfo_exists())
         self.assertTrue(self.app.quiz_ai_reply.winfo_exists())
         # Vertical stack: the reply row is weighted, so it grows with the window.
-        self.assertEqual(
-            self.app.quiz_ai_panel.grid_rowconfigure(1)["weight"], 1
-        )
+        self.assertEqual(self.app.quiz_ai_panel.grid_rowconfigure(1)["weight"], 1)
         self.assert_no_chinese(self.app.quiz_ai_panel)
 
     def test_quiz_ai_request_follows_the_ui_language(self):
@@ -422,10 +442,11 @@ class RoleGuiTests(unittest.TestCase):
         self.assertEqual(lines[0], "Help me understand this multiple-choice question.")
         self.assertTrue(lines[1].startswith("Question: "))
         self.assertIn("Options:", lines)
-        self.assertEqual(
-            lines[-1],
-            "Give a short hint first, then briefly analyse each option. Answer in English.",
+        self.assertIn(
+            "Give a short hint first, then briefly analyse each option. Answer in English.", lines
         )
+        self.assertTrue(lines[-1].startswith("FIRST HINT:"))
+        self.assertIn("Do not reveal the answer", lines[-1])
         for line in (lines[0], lines[1].split(": ", 1)[0], lines[-1]):
             self.assertFalse(any("\u4e00" <= char <= "\u9fff" for char in line))
 

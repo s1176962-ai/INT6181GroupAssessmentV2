@@ -5,6 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from .history_notes import display_time
+
 
 def build_report(kind, data, bank):
     try:
@@ -76,9 +78,9 @@ def build_report(kind, data, bank):
     total = sum(r["total"] for r in history)
     correct = sum(r["correct"] for r in history)
     story = [
-        para("QUIZ STUDIO", heading),
+        para("WhaleMate · 鲸伴", heading),
         para("学习成绩报告" if kind == "history" else "错题复习报告", title),
-        para("生成时间：" + datetime.now().strftime("%Y-%m-%d %H:%M")),
+        para("生成时间：" + datetime.now().astimezone().strftime("%Y/%m/%d %H:%M:%S")),
     ]
     summary = Table(
         [
@@ -102,12 +104,9 @@ def build_report(kind, data, bank):
     )
     story += [summary, Spacer(1, 16)]
     if kind == "history":
-        for name in ("english", "mathematics", "science"):
-            if any(name[:4] in r["subject"].lower() for r in history):
-                story += art("assets/images/subjects/" + name + ".png", 170, 65)
         for i, r in enumerate(reversed(history), 1):
             story += [
-                para(f"{i:02}  {r['subject']} · {r['date']}", heading),
+                para(f"{i:02}  {r['subject']} · {display_time(r['date'])}", heading),
                 para(
                     f"得分 {r['score']}/{r['max_score']}    正确率 {r['accuracy']}%    正确 {r['correct']}  错误 {r['incorrect']}"
                 ),
@@ -115,6 +114,9 @@ def build_report(kind, data, bank):
             ]
             if r.get("timed_out"):
                 story.append(para(f"超时结束 · 未答 {r.get('unanswered', 0)} 题"))
+            story.append(para("收藏：" + ("是" if r.get("liked") else "否")))
+            if r.get("note"):
+                story.append(para("学习笔记：\n" + r["note"]))
     else:
         for i, (qid, r) in enumerate(data["wrong"].items(), 1):
             if i > 1:
@@ -148,7 +150,7 @@ def build_report(kind, data, bank):
         canvas.line(42, 38, 553, 38)
         canvas.setFont(font, 9)
         canvas.setFillColor(colors.HexColor("#607784"))
-        canvas.drawString(42, 24, "QUIZ STUDIO · 学习记录")
+        canvas.drawString(42, 24, "WhaleMate · 学习记录")
         canvas.drawRightString(553, 24, f"第 {doc.page} 页")
         canvas.restoreState()
 

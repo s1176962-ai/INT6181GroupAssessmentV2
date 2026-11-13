@@ -14,6 +14,7 @@ class ImportPreview:
     path: Path
     rows: list[dict]
     valid: list[Question]
+    target: str = ""
 
     @property
     def total(self):
@@ -32,9 +33,20 @@ class QuestionImportService:
     MAX_BYTES = 5 * 1024 * 1024
     MAX_RECORDS = 1000
 
-    def __init__(self, personal_repository, public_questions):
+    def __init__(self, personal_repository, public_questions, authorize=None):
         self.personal_repository = personal_repository
-        self.public_questions = list(public_questions)
+        self.public_questions = public_questions
+        self.authorize = authorize
+
+    def _public(self):
+        return list(
+            self.public_questions() if callable(self.public_questions) else self.public_questions
+        )
+
+    def _target(self):
+        repository = self.personal_repository
+        path = repository.store.path if hasattr(repository, "store") else repository.folder
+        return str(path.resolve())
 
     @staticmethod
     def _fingerprint(question):
@@ -44,6 +56,8 @@ class QuestionImportService:
 
     @staticmethod
     def _csv_record(record):
+        if None in record or any(value is None for value in record.values()):
+            raise ValueError("CSV 列数与标题不一致，请检查逗号和双引号。")
         converted = {
             key: (value.strip() if isinstance(value, str) else value)
             for key, value in record.items()
@@ -68,7 +82,8 @@ class QuestionImportService:
                 raise ValueError("option_images 必须留空、为 null 或 JSON 数组") from exc
         else:
             converted["option_images"] = None
-        converted["question_image"] = converted.get("question_image") or None
+        image = converted.get("question_image")
+        converted["question_image"] = None if image in (None, "", "null") else image
         return converted
 
     def _records(self, path):
@@ -83,12 +98,23 @@ class QuestionImportService:
                     reader = csv.DictReader(handle)
                     if not reader.fieldnames:
                         raise ValueError("CSV 必须有标题行")
+                    reader.fieldnames = [name.strip() for name in reader.fieldnames]
+                    if len(set(reader.fieldnames)) != len(reader.fieldnames):
+                        raise ValueError("CSV 标题不能重复。")
+                    required = {"id", "subject", "question", "answer", "explanation"}
+                    if not required.issubset(reader.fieldnames):
+                        raise ValueError(
+                            "CSV 缺少必要标题："
+                            + ", ".join(sorted(required - set(reader.fieldnames)))
+                        )
                     return list(reader)
             raise ValueError("仅支持 .json 和 .csv 文件")
         except (OSError, UnicodeError, json.JSONDecodeError, csv.Error) as exc:
             raise DataError(f"无法读取导入文件 {path}：{exc}") from exc
 
     def preview(self, source):
+        if self.authorize:
+            self.authorize()
         path = Path(source)
         if not path.is_file():
             raise ValueError("请选择存在的 JSON 或 CSV 文件。")
@@ -99,7 +125,7 @@ class QuestionImportService:
             raise ValueError("导入文件中没有题目。")
         if len(records) > self.MAX_RECORDS:
             raise ValueError("一次最多导入 1000 道题。")
-        existing = [*self.public_questions, *self.personal_repository.all()]
+        existing = [*self._public(), *self.personal_repository.all()]
         ids = {question.id for question in existing}
         fingerprints = {self._fingerprint(question) for question in existing}
         rows, valid = [], []
@@ -128,6 +154,7 @@ class QuestionImportService:
                         "topic": question.topic,
                         "difficulty": question.difficulty,
                         "question": question.question,
+                        "wrong_copy": record.get("import_source") == "wrong_export",
                     }
                 )
             except (TypeError, ValueError) as exc:
@@ -144,10 +171,29 @@ class QuestionImportService:
                         "question": "",
                     }
                 )
-        return ImportPreview(path, rows, valid)
+        return ImportPreview(path, rows, valid, self._target())
 
     def confirm(self, preview):
+        if self.authorize:
+            self.authorize()
         if not isinstance(preview, ImportPreview):
             raise ValueError("请先预览并校验导入文件。")
-        reserved = {question.id for question in self.public_questions}
-        return self.personal_repository.merge(preview.valid, reserved_ids=reserved)
+        if preview.target != self._target():
+            raise ValueError("导入目标已改变，请重新选择文件并预览。")
+        public = self._public()
+        existing = [*public, *self.personal_repository.all()]
+        seen_ids = {q.id for q in existing}
+        seen_content = {self._fingerprint(q) for q in existing}
+        candidates = []
+        for question in preview.valid:
+            question = Question.from_dict(question.to_dict())
+            fingerprint = self._fingerprint(question)
+            wrong_copy = any(
+                row["id"] == question.id and row.get("wrong_copy") for row in preview.rows
+            )
+            if question.id in seen_ids or fingerprint in seen_content and not wrong_copy:
+                continue
+            seen_ids.add(question.id)
+            seen_content.add(fingerprint)
+            candidates.append(question)
+        return self.personal_repository.merge(candidates, reserved_ids={q.id for q in public})

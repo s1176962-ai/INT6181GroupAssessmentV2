@@ -1,4 +1,26 @@
-# 测试报告 · 1.2
+# 提交前测试报告 · 2026-11-13
+
+执行目录：`D:\develop\workplace\INT6181GroupAssessmentV2`。
+
+```text
+python -m unittest discover -s tests -v
+Ran 126 tests in 144.269s
+OK
+
+python -m ruff check .
+All checks passed!
+
+python -m compileall -q learning_platform tests
+通过
+```
+
+本轮使用标准测试命令，无全局弹窗替换。原 3 项失败已同步当前账户权限及两阶段伴学要求；新增停用账号写入拒绝、迟到决策不扣血和游客访问限制回归。完整测试输出未再出现 invalid command name 遗留回调报错。
+
+真实接口检查：使用本机保存的设置，对 MAT009 发送题干图和文字选项，返回选项 5 与 3 段摘要。只验证单题联通、图片输入与结构解析，不保证所有题目正确率；未修改或输出密钥。
+
+Ruff 配置保留兼容常量公开导出，备份目录不作为应用代码检查；截图脚本因 DPI 初始化需要保留后置导入。以下保留旧版测试历史。
+
+# 历史测试报告 · 1.2
 
 日期：2026-10-26。环境：Windows、Python 3.13.9、Tk 8.6、Ruff 0.17.2。
 

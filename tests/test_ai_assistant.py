@@ -20,6 +20,66 @@ def has_chinese(text):
 
 
 class AiAssistantTests(unittest.TestCase):
+    def test_image_request_sends_labelled_bytes_with_vision_model(self):
+        image = self.folder / "question.png"
+        image.write_bytes(b"\x89PNG\r\n\x1a\n" + b"test image")
+        settings = MagicMock()
+        settings.load.return_value = {
+            "endpoint": "https://api.deepseek.com/chat/completions",
+            "model": "deepseek-chat",
+            "api_key": "secret",
+        }
+        response = MagicMock()
+        response.read.return_value = json.dumps(
+            {"choices": [{"message": {"content": "Circle"}}]}
+        ).encode()
+        response.__enter__.return_value = response
+        with patch(
+            "learning_platform.ai_assistant.urllib.request.urlopen", return_value=response
+        ) as call:
+            AiAssistant(settings).ask("Which shape?", "en", images=[("Question image", image)])
+        payload = json.loads(call.call_args.args[0].data)
+        self.assertEqual(payload["model"], "deepseek-flash")
+        content = payload["messages"][1]["content"]
+        self.assertEqual(content[1], {"type": "text", "text": "Question image"})
+        self.assertTrue(content[2]["image_url"]["url"].startswith("data:image/png;base64,"))
+        self.assertNotIn(str(self.folder), json.dumps(payload))
+
+    def test_structured_decision_uses_json_mode_and_separate_budget(self):
+        settings = MagicMock()
+        settings.load.return_value = {
+            "endpoint": "https://api.deepseek.com/chat/completions",
+            "model": "deepseek-chat",
+            "api_key": "secret",
+        }
+        response = MagicMock()
+        response.read.return_value = json.dumps(
+            {"choices": [{"message": {"content": "{}"}}]}
+        ).encode()
+        response.__enter__.return_value = response
+        with patch(
+            "learning_platform.ai_assistant.urllib.request.urlopen", return_value=response
+        ) as call:
+            AiAssistant(settings).ask("Return JSON", "en", structured=True)
+        payload = json.loads(call.call_args.args[0].data)
+        self.assertEqual(payload["response_format"], {"type": "json_object"})
+        self.assertEqual(payload["max_tokens"], 800)
+        self.assertNotIn("study buddy", payload["messages"][0]["content"])
+
+    def test_invalid_image_never_reaches_network(self):
+        image = self.folder / "invalid.png"
+        image.write_text("not an image")
+        settings = MagicMock()
+        settings.load.return_value = {
+            "endpoint": "https://api.deepseek.com/chat/completions",
+            "model": "deepseek-chat",
+            "api_key": "secret",
+        }
+        with patch("learning_platform.ai_assistant.urllib.request.urlopen") as call:
+            with self.assertRaises(ValueError):
+                AiAssistant(settings).ask("Which shape?", "en", images=[("Question image", image)])
+            call.assert_not_called()
+
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)

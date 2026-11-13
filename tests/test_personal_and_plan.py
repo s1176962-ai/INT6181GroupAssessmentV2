@@ -90,6 +90,50 @@ class PersonalQuestionImportTests(unittest.TestCase):
         self.assertEqual((len(json_preview.valid), json_preview.errors), (1, 0))
         self.assertEqual((len(csv_preview.valid), csv_preview.errors), (1, 0))
 
+    def test_demo_files_import_together_and_reimport_is_idempotent(self):
+        service = QuestionImportService(self.alice, self.public)
+        for name in ("import_test_json.json", "import_test_csv.csv"):
+            preview = service.preview(ROOT / "examples" / name)
+            self.assertEqual((len(preview.valid), preview.errors), (3, 0))
+            self.assertEqual(len(service.confirm(preview)), 3)
+            self.assertEqual(service.confirm(preview), [])
+        self.assertEqual(len(self.alice.all()), 6)
+
+    def test_preview_cannot_be_applied_to_another_account(self):
+        preview = QuestionImportService(self.alice, self.public).preview(
+            ROOT / "examples/import_test_json.json"
+        )
+        with self.assertRaises(ValueError):
+            QuestionImportService(self.bob, self.public).confirm(preview)
+        self.assertEqual(self.bob.all(), [])
+
+    def test_confirm_rechecks_duplicate_content_added_after_preview(self):
+        service = QuestionImportService(self.alice, self.public)
+        preview = service.preview(ROOT / "examples/import_test_json.json")
+        first = preview.valid[0]
+        self.alice.save(Question.from_dict({**first.to_dict(), "id": "CONCURRENT"}))
+        self.assertEqual(len(service.confirm(preview)), 2)
+
+    def test_bad_csv_headers_fail_before_preview(self):
+        path = self.folder / "bad.csv"
+        path.write_text("id,id,question\n1,2,broken", encoding="utf-8")
+        with self.assertRaises(ValueError):
+            QuestionImportService(self.alice, self.public).preview(path)
+
+    def test_revoked_authorization_blocks_confirm(self):
+        enabled = True
+
+        def authorize():
+            if not enabled:
+                raise ValueError("Session revoked")
+
+        service = QuestionImportService(self.alice, self.public, authorize=authorize)
+        preview = service.preview(ROOT / "examples/import_test_json.json")
+        enabled = False
+        with self.assertRaises(ValueError):
+            service.confirm(preview)
+        self.assertEqual(self.alice.all(), [])
+
     def test_admin_public_bank_import_uses_the_same_validated_template(self):
         for suffix in ("json", "csv"):
             public_folder = self.folder / f"public-{suffix}"
