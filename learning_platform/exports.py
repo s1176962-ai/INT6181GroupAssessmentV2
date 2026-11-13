@@ -6,6 +6,8 @@ import json
 import os
 import tempfile
 
+from .history_notes import display_time
+
 
 def rows_for(kind, data, bank):
     if kind == "history":
@@ -21,7 +23,10 @@ def rows_for(kind, data, bank):
             "timed_out",
             "unanswered",
         ]
-        return keys, [[r.get(k, "") for k in keys] for r in data["history"]]
+        return keys, [
+            [display_time(r[k]) if k == "date" and r.get(k) else r.get(k, "") for k in keys]
+            for r in data["history"]
+        ]
     keys = [
         "id",
         "subject",
@@ -57,7 +62,7 @@ def rows_for(kind, data, bank):
                 q.answer if q else "",
                 q.explanation if q else "",
                 record.get("count", 0),
-                record.get("last_seen", ""),
+                display_time(record["last_seen"]) if record.get("last_seen") else "",
                 "wrong_export",
             ]
         )

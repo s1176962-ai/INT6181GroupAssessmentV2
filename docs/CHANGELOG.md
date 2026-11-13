@@ -1,5 +1,24 @@
 # 变更记录
 
+## English-first documentation and Unicode punctuation · 2026-11-13
+
+- README, the authoritative specification and the SRS mapping guide now have matched English-first and Chinese sections, with current permissions, companion/battle behaviour, exports and limitations consolidated.
+- Original documents remain unchanged in `docs/archive/*PRE_BILINGUAL_20261113.md` for historical reference; contradictory legacy claims no longer appear as current requirements.
+- PDF paragraphs switch fonts for Unicode runs, including full-width punctuation such as `！`, while retaining Helvetica for Latin text and preserving user wording.
+
+## 英文优先双语文档与标点修复 · 2026-11-13
+
+- README、主规格和 SRS 对应说明整理为英文在前、中文在后，内容覆盖当前权限、伴学/对战、导出及限制。
+- 三份原文完整保存在 `docs/archive/*PRE_BILINGUAL_20261113.md`，过时说明不再作为当前需求。
+- PDF 对 Unicode 文本段使用字体回退，覆盖全角 `！`，英文仍使用 Helvetica，不替换用户笔记内容。
+
+## 英文导出与时间格式 · 2026-11-13
+
+- 错题和学习成绩 PDF 的全部固定文案、页脚及文档属性统一英文，不随界面语言改变；保留题目和用户笔记原文。
+- 英文使用 Helvetica 字体，中文用户内容保留字体回退；错题配图与笔记继续导出。
+- PDF/CSV 记录时间统一本机时区的 yyyy/mm/dd hh:mm:ss，PDF 显示导出时区，错题最近作答不再直接输出 ISO 时间戳。
+- 英文导入预览补齐 Validation passed 及重复题目提示，增加实际表格、导出文案及时间格式回归检查。
+
 ## 提交前审查修复 · 2026-11-13
 
 - 普通个人题库与管理员监管统一使用权限访问服务；账号在编辑期间被停用后，保存和删除都被拒绝。

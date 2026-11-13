@@ -524,6 +524,9 @@
   "异常原因：": "Reason: ",
   "本题未结算，请重试。": "This round was not scored. Please retry.",
   "重试本题": "Retry question",
+  "校验通过": "Validation passed",
+  "题目 ID 已存在，已安全跳过。": "Question ID already exists; safely skipped.",
+  "题目内容已存在，已安全跳过。": "Question content already exists; safely skipped.",
   "AI 提示": "AI hint",
   "Enter 发送 · Shift+Enter 换行": "Enter to send · Shift+Enter for a new line",
   "问我任何学习问题，我会给出简短提示。": "Ask me anything about your study and I'll answer with a short hint."

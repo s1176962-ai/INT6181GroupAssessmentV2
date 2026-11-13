@@ -1,180 +1,69 @@
-# V2 当前版本说明 · 2026-10-29
+# WhaleMate
 
-界面性能维护（2026-11-13）：减少倒计时、布局及点赞时的重复重绘，练习与对战表情使用有上限的图片缓存。模型请求仍在后台执行；接口响应速度与网络、模型负载相关，不能通过界面缓存保证。
+A configurable study companion with quizzes, personal question banks, guided help from Big Whale, and gamified player-versus-AI quiz battles.
 
-对战 API 已支持题干图与选项图：官方 DeepSeek 图片请求使用 `deepseek-flash`，纯文字沿用设置模型；自定义接口需自行配置视觉模型。图片只在 API 对战时发送，答案和解析不发送。Local 模式仍是概率模拟。详见 [对战说明](docs/BATTLE.md)。
+**Quiz · Configure · Learn together**
 
-## 题库导入测试 · 2026-11-13
+Updated: 2026-11-13. English is presented first; an equivalent Chinese guide follows. This guide describes the current V2 implementation. Earlier documentation is retained in [the README archive](docs/archive/README_PRE_BILINGUAL_20261113.md); historical statements do not override this guide.
 
-练习配置页先选择公共/个人题库，再选择对应科目、主题和难度。切换题库会刷新所有筛选项，实际练习只从当前题库取题；个人题库为空时可进入导入页，访客只能选择公共题库。主题/难度与限时/题数两组控件按行底边对齐，长标题换行不会改变输入框位置。
+## English
 
-两份可连续导入的测试文件：[JSON](examples/import_test_json.json)、[CSV](examples/import_test_csv.csv)，各含 3 道不同题目，首次导入各 3 条有效，重复导入安全跳过。请在题库管理的个人题库内选择批量导入。导入规则、整改清单和管理员监管功能见 [题库导入说明](docs/QUESTION_BANK_IMPORT.md)。管理员现可按账户维护所有个人题库。
+### 1. Install and run
 
-## 学习记录与笔记 · 2026-11-13
-
-登录后在学习记录页面使用空心爱心收藏一轮练习，用铅笔编辑学习笔记；可组合筛选日期范围、是否收藏和是否有笔记。日期输入为 `yyyy/mm/dd`，起止日期均包含在查询中；记录时间按本机时区显示为 `yyyy/mm/dd hh:mm:ss`。顶部四项统计对应当前查询结果。学习记录页仅提供 PDF 导出，包含当前已查询的记录、收藏状态和完整笔记；错题本原有导出入口不受影响。
-
-笔记和收藏按练习记录 ID 保存在当前账户目录的 `history_notes.json`，不改变旧成绩文件。旧数据保存的是整轮练习汇总，因此这里的收藏和笔记附属于每轮记录，而非历史中不存在的逐题明细。
-
-## 答题对战 · 2026-11-12
-
-侧边栏“答题对战”向所有角色开放，支持公共题库科目、题量和四档模拟对手。双方同题、每题 30 秒，正确得 100 分并按时间梯度加分，预留额外分。双方锁定后揭晓，结束显示胜负。当前为本地模拟，不消耗 API；规则和限制见 [对战模块](docs/BATTLE.md)。
-
-## 登录便利功能
-
-登录页会自动填入上次成功登录的用户名。勾选“记住密码”并成功登录后，Windows 使用当前用户的 DPAPI、macOS 使用系统钥匙串保存密码；本地状态文件不保存明文密码，且已被 Git 忽略。取消勾选并再次成功登录后，会清除应用状态中的已记忆密码。共享电脑不建议开启此功能。
-
-正式目录：`D:\develop\workplace\INT6181GroupAssessmentV2`。运行 `python main.py`（Windows 也可双击 `start.bat`）。窗口默认最大化，新建配置默认英文界面与深色主题。当前提供 2026-11-11 完成的 v2.3 现代轻量视觉层、v2.4 布局修复、v2.5 答题页/国际化收尾、v2.6 首页 Ask AI 卡片重做与 v2.7 题目插图放大：设计令牌集中在 `learning_platform/tokens.py`，自绘圆角控件在 `learning_platform/modern.py`，Windows 高分屏 DPI 感知在 `learning_platform/dpi.py`；首页保持原 V2 四卡结构但卡片已随窗口高度铺满并改为圆角柔和阴影；答题页「Ask AI」改为上下结构并填满列高，题库/用户管理表格随视口拉伸；英文界面下难度标签、配置摘要、AI 提示词与回复均为英文（题库题干与选项保留原文）。首页「问问 AI」改为主色系语义色 + 自绘圆角输入区，Q 版形象作为空闲态大图随卡片高度自适应放大，提问后让位给回复区。题目插图升级为 1440×810 三倍分辨率透明素材，界面按列宽自适应放大到接近整列宽度。保留配图题库、V2 测试、窗口尺寸设置与原版账户。完整差异与需求补充见 [V2 整合说明](docs/V2_INTEGRATION.md)，视觉规范见 [DESIGN.md](DESIGN.md)，AI 控制词见 [AI_ASSISTANT_PROMPT](docs/AI_ASSISTANT_PROMPT.md)。以下保留原版文档历史，其中旧目录、旧布局和测试数量以本说明为准。
-
-## V2 快速开始与新增功能
-
-### Windows 一键启动
-
-打开 `D:\develop\workplace\INT6181GroupAssessmentV2`，双击 **start.bat**。脚本自动定位项目目录，并通过 launcher.py 检查 Python 版本、Tk 和题库目录。启动失败会显示错误并暂停，方便查看原因。
-
-首次使用需要 Python 3.10+，安装时保留 Tcl/Tk 并勾选 **Add Python to PATH**。脚本不会自动安装 Python。也可在此目录执行 `python main.py`。
-
-PDF 导出需要额外安装依赖，在项目目录的 PowerShell 执行一次：
-
-```powershell
-python -m pip install -r requirements.txt
-```
-
-### 练习限时（第 3 项）
-
-在练习设置中填写“每轮限时（秒，0 表示不限时）”，使用 `[−] 数值 [+]` 步进控件，范围为 0–86400。开始后顶部显示剩余秒数；当前支持整轮限时，不提供每题独立限时。
-
-时间耗尽后自动结束并保存该轮成绩，未答题计为未得分；结果页显示超时及未答数量。未答题不会自动进入错题本。复习和再次练习沿用当前限时值。
-
-### 成绩与错题导出（第 5 项）
-
-进入“学习历史”或“错题本”，点击 **导出 CSV** 或 **导出 PDF**，选择保存位置。仅导出当前账户的记录。
-
-- CSV 使用 UTF-8 BOM，便于表格软件读取中文。
-- PDF 支持中文和分页，需要 reportlab；缺少依赖时会提示安装命令。
-- 历史导出包含日期、学科、题数、正确率、得分及超时字段；错题导出包含题干、最近答案、正确答案、解析和错误次数。
-
-### 中途退出说明（第 6 项）
-
-手动退出未完成练习时，确认框会说明：**本轮不计入成绩历史，但已经提交且答错的题目会保留在错题本，供以后复习。** 未完成练习不能恢复。倒计时耗尽属于自动结束，会按上述超时规则保存成绩。
-
-### 窗口与显示
-
-设置 → 窗口与布局，可选择自动适应屏幕或 960×640、1080×720、1280×800。紧凑页边距减少内容区留白；设置立即生效并保存，不改变电脑系统分辨率。
-
-### 深浅主题与默认语言
-
-登录页顶部工具栏、侧边栏底部或设置 → 外观均可切换深色/浅色主题，选择立即生效并写入 `data/settings.json`。新建配置默认使用英文界面和深色主题（`{"language": "en"}`）；已有 `settings.json` 保持原语言，可在设置中切换。切换主题会重建当前页面，正在进行的练习与已提交答案不会丢失。v2.3 视觉层已覆盖应用外壳（54px 顶栏、圆形返回按钮、侧栏选中态）、「配置练习」表单页（单张白卡片、学科三卡、自绘下拉/分段/步进控件、卡片内 footer）与设置页的深色模式开关；v2.4 追加：两个启动入口默认最大化窗口、首页四卡随视口高度铺满且内距统一为 24、登录表单与标题放大、所有说明文字按实际宽度自适应换行，并修复了高 DPI 下设置页单选项只剩圆点、登录页工具栏文字被裁切的显示 bug。首页仍为原 V2 的四卡结构（今日目标 / 连续学习 / 最近学习 / 问问 AI）；v2.6 只重做了「问问 AI」卡片内部：灰色区块换成 `AI_INPUT_BG` / `AI_REPLY_BG` 主色系语义色，输入区改为圆角 SoftPanel + 内嵌发送按钮（Enter 发送、Shift+Enter 换行），回复区空闲时显示放大的 Q 版形象，提问后自动切换为回复文本。设置页分区与旧页面的原生 ttk 按钮仍为直角，详见 [DESIGN.md](DESIGN.md) 的已知限制。
-
-### 验证与文档
-
-原有 V2 测试文件保留，最近一次完整回归 **92 项全部通过**（含默认英文、AI 双语提示词、英文界面中文残留扫描、表格与 Ask AI 布局锁定、首页 Ask AI 主色令牌与空闲/回复两态切换测试）；超时存档和 CSV/PDF 生成检查通过，PDF 尚未逐页人工视觉验收。Windows 上请使用项目 Python 解释器（含 tkinter / reportlab），内置精简 Python 会因缺少依赖误报错误。
-
-```powershell
-py -3 -m unittest discover -s tests -v
-```
-
-详细行为和修改文件见 [功能 3、5、6、7 说明](docs/FEATURES_3567.md)，账户迁移与版本差异见 [V2 整合说明](docs/V2_INTEGRATION.md)。以下旧版章节中的历史目录、界面描述以本节为准。
-
-# 多学科 Python 练习平台 · 1.2（历史基础说明）
-
-完全离线的 Tkinter 桌面应用，使用 Python 标准库和 JSON。包含 English、Mathematics、Science 三科共 60 道示例题（每科 20 道），以及题干图片和选项图片示例。
-
-## 环境与启动
-
-推荐 Python 3.10 或以上，安装时包含 Tcl/Tk（Windows 官方 Python 安装器默认提供）。核心练习功能无需第三方依赖；PDF 导出需安装 `requirements.txt` 中的 reportlab。当前实测环境：Windows、Python 3.13.9、Tk 8.6。
-
-在 PowerShell 中执行：
+Use Python 3.10+ with Tcl/Tk. On Windows, double-click `start.bat` or run:
 
 ```powershell
 cd D:\develop\workplace\INT6181GroupAssessmentV2
+python -m pip install -r requirements.txt
 python main.py
 ```
 
-也可以运行 `python -m learning_platform`。从任意目录启动时可以指定入口绝对路径：
+`python -m learning_platform` is another entry point. `python -m tkinter` checks Tk availability. The launcher checks the Python version, Tk and question directory; it does not install Python. Linux needs a graphical desktop and may require `python3-tk`. Core practice uses the standard library; ReportLab is required for PDF exports. Restart the application after changing code.
 
-```powershell
-python D:\develop\workplace\INT6181GroupAssessmentV2\main.py
-```
+### 2. Accounts and permissions
 
-先运行 `python -m tkinter` 可以检查 Tcl/Tk 环境。Linux 需要可用的图形桌面，某些发行版需要另装 `python3-tk`。项目目录需要允许写入，以保存学习记录。不要同时运行多个实例修改同一份进度。
+Register a unique username of 3-32 word characters or hyphens and a matching password of 6-16 characters. Usernames are case-insensitive. Public registration always creates a student. Passwords are stored as randomly salted PBKDF2 hashes. Legacy longer passwords remain usable until reset.
 
-## 登录与个人记录
+| Role | Public practice and battles | Own personal bank | Notebook and learning history | Public-bank maintenance | All personal banks and user management |
+| --- | --- | --- | --- | --- | --- |
+| Guest | Yes | No | No | No | No |
+| Student | Yes | Yes | Own profile only | No | No |
+| Administrator | Yes | Yes | Own profile; other users through administration | Yes | Yes |
 
-启动后显示登录页面。首次使用点击“没有账户？创建账户”，输入用户名、密码及确认密码，点击“注册并进入”。用户名为 3–32 位文字、数字、下划线或短横线；密码为 6–16 位。以后使用同一账户登录即可恢复个人错题及历史。
+The previously migrated `wutaicheng` account retains its administrator role, credentials and UUID. Registering that name does not grant privileges. Administrators may create, rename, enable/disable and promote/demote accounts, reset passwords and inspect learning data. Renaming preserves the UUID. Password fields left blank during editing retain the existing password. The last enabled administrator cannot be removed or disabled.
 
-首页支持“退出登录 / 切换账户”。账户完全离线，密码以随机盐和 PBKDF2 哈希保存。每个账户有独立进度；题库在本机账户间共享，只有管理员可维护题库和管理用户。当前没有自助密码找回，管理员可以重置密码。
+Protected actions recheck persisted permissions. A disabled account cannot keep saving or deleting personal questions from an already-open form. Local profiles do not protect against someone who can edit the files directly.
 
-“访客进入”沿用原版本的学习记录，只提供练习，不提供题库维护。此次升级不会把旧记录清空，也不会自动将其归给新注册账户。
+The login form restores the last successful username. Remembering a password is optional and uses Windows DPAPI or macOS Keychain protection. No plaintext password is stored in the user table or committed configuration. Unchecking the option and logging in successfully clears the saved credential. Logout and account switching preserve profile isolation.
 
-## 管理员与用户管理
+### 3. Configure and answer a quiz
 
-本次已将现有账户 **wutaicheng** 设置为管理员，原密码和学习记录保留。请关闭旧程序再启动，以加载新权限。
+Select the question bank first, then its subject, topic, difficulty, question count and optional session time limit. Guests use the public bank. Switching banks refreshes the available subjects and filters. Questions are shuffled without duplication; requests above the matching count use the available questions. An empty bank or no matches produces guidance instead of starting an empty quiz.
 
-“用户管理”和“题库管理”均位于侧边栏。管理员可以看到两项；普通用户只能看到题库管理；访客两项都看不到。公共注册创建普通用户，不会因为用户名叫 wutaicheng 而自动获取管理员权限。
+Numeric controls accept typing and +/- buttons. A session time limit of 0 means unlimited; the supported range is 0-86400 seconds. Submit one answer per question, then continue. Normal quizzes award one point for a correct answer and no negative points. Results include totals, accuracy and score.
 
-进入“用户管理”后：
+The progress indicator stays at the top and primary actions stay at the bottom. Long question content and feedback can scroll. Selecting an answer or submitting it must not move the companion panel. Optional illustrations are shown when supplied; text-only questions do not receive an invented illustration.
 
-- 选中账户，点击“查看选中账户学习数据”，查看其成绩历史和错题记录。
-- “新增账户”可以设置用户名、密码、角色和是否允许登录。
-- “修改选中账户 / 重置密码”可以改名、重置密码、调整角色；取消勾选“允许登录”即停用，重新勾选可恢复。
-- 编辑时密码留空则保留原密码；新设密码和确认密码必须一致，长度 6–16 位。
-- 改名不改变账户 UUID，因此保留学习数据。系统不会允许停用或降级最后一个启用的管理员。
+Exiting an unfinished quiz keeps already-submitted wrong answers but does not create a completed history entry. Reaching the session limit saves the result with unanswered questions receiving no points; unanswered questions are not added to the notebook. Incomplete sessions cannot be resumed.
 
-停用账户后不能登录；已有会话在下一次受保护操作或提交答案时也会被拦截。旧版已存在的长密码仍可登录，直到管理员重置为新规则，避免升级锁定原账户。密码及其哈希不会在用户管理页面显示。
+### 4. Question banks and imports
 
-账户文件升级前已备份到 `data/account_backups/`。本地账户仅在应用中划分权限，不能阻止有文件系统权限的人直接修改 JSON。分享项目时不要包含真实账户文件、个人记录和账户备份。
+Students manage their own personal bank through the same question-bank centre used by administrators. Public questions are available for practice by everyone, but only administrators can add, edit, delete or import them. Personal questions remain private to their owner and administrators; publishing them publicly is not implemented.
 
-## 设置与语言
+Use search and subject filters, add/edit forms, image controls and preview. New subjects, topics and difficulty values can be entered without changing code. Each question needs at least two unique non-empty options and one correct answer that exactly matches an option. Existing IDs are immutable; stale edits are rejected.
 
-登录页或首页 → “设置 / 语言” → 选择“简体中文”或“English” → “保存语言设置”。保存后立即显示所选语言，并在下次启动时保留。题目内容、学科、主题和用户填写的信息不会被自动翻译。
+Administrators can choose **All personal banks** and select an owner, or select a user in user management and open **Personal bank**. They can inspect, create, edit or remove that owner's questions. Changes are backed up before writing. Importing on behalf of another owner is not provided.
 
-## 使用方法
+Public and personal imports use JSON/CSV selection, validation, preview and explicit confirmation. Invalid rows are identified; duplicate IDs/content are skipped. Confirmation rechecks permissions, the target bank and current duplicates before writing. The English preview uses **Validation passed**. Files are limited to 5 MB and 1,000 records.
 
-1. 点击“开始练习”，选择学科、主题、难度和正整数题数。题目顺序随机；数量超过可用题目时使用全部匹配题目，不重复抽题。
-2. 选择一个答案，点击“提交答案”。立即显示判题结果、正确答案和解析；本题只能提交一次。
-3. 点击“下一题”，最后一题提交后点击“查看结果”。每题 1 分，不倒扣；正确率为正确数 / 总数 × 100%，显示到两位小数。
-4. 在“错题本与复习”查看选项、图片、答案、解析和错误次数。可以逐题复习或复习全部。**只有在错题复习中答对才移除记录**；普通练习答对不移除。重复答错按题目 ID 累计次数。
-5. “学习统计与历史”显示完成的普通练习及错题复习。重新启动后记录仍然存在。
+- [JSON test file](examples/import_test_json.json) and [CSV test file](examples/import_test_csv.csv) contain three different questions each and can be imported consecutively.
+- Repeat imports safely skip existing questions.
+- Wrong-question CSV exports can be imported as review questions. Compatible legacy exports with a correct answer and a different last answer are accepted as two-option questions.
+- See [import rules](docs/QUESTION_BANK_IMPORT.md) for templates, field definitions and duplicate handling.
 
-未完成的练习退出前会确认：已提交的错题保留，但不记为一轮完成成绩。最后一题提交成功时成绩已经保存，即使没有点击查看结果也不会丢失。
+The editor accepts PNG/GIF/PPM/PGM images, checks decoding, and limits uploads to 10 MB and 16 million pixels. Convert JPEG/WebP to PNG before editor upload. Files are copied to unique names under `assets/uploads/`; source files are not moved. Removing an image reference does not delete a file that other questions or backups may need.
 
-## 个人题库与导入
-
-登录账户后从侧边栏打开“题库管理”。管理员可在公共题库与个人题库间切换；普通用户直接进入自己的个人题库。两种题库共用列表、搜索、新增、编辑、删除、图片上传和预览界面，但公共题库的写操作仍只允许管理员执行。
-
-公共和个人题库工具栏都提供“批量导入 JSON / CSV”；公共题库导入入口只对管理员开放。系统会先逐条校验并预览；重复 ID、与公共题库冲突的 ID 和重复内容会安全跳过，只有确认后才原子写入目标题库。个人题库保存在 `data/profiles/<UUID>/questions.json`，公共导入写入 `data/questions/custom.json` 并沿用自动备份机制。官方 JSON、CSV 模板位于 `examples/`，并由自动化测试实际读取验证。错题本导出的 CSV 现在包含 `topic`、`difficulty`、`type`、`options` 和图片字段，也可直接导入个人题库；旧版包含正确答案和最近错误答案的错题 CSV 会转换为双选项复习题。
-
-除首页外，主要页面顶栏左侧统一提供“←”返回上一层按钮，标题在箭头后显示。题目或账户编辑返回对应列表，批量导入返回当前题库，其他一级页面返回首页。列表操作按钮统一横向排列，减少滚动和鼠标移动。
-
-公共题库和个人题库互不覆盖。个人题库只有所属账户可见；普通用户不能切换或修改公共题库，访客不能进入题库管理。
-
-## 每日学习计划
-
-首页把每日目标及其设置合并在同一张卡片中，并显示当前的“题库 · 科目 · 难度”。点击卡片右上角的扳手，可选择公共/个人题库、指定或随机科目、指定或全部难度，以及 1–500 道每日题量。“继续今日练习”不再进入普通配置页，而会直接从所选题库按设置随机抽取当天尚未完成的题数；若没有匹配题目，会提示调整计划。
-
-每次成功提交答案都会立即记录，因此未完成的练习也会准确计入当天进度。计划和答题事件保存在账户独立的 `learning_plan.json`；旧版只含题量和答题记录的文件会自动使用“公共题库、随机科目、全部难度”，不清空已有数据。原 `progress.json` 结构保持不变。
-
-## 问问 AI
-
-在“设置 / 语言”的“问问 AI 设置”中填写 DeepSeek API Key，可按需修改兼容的 HTTPS 接口地址和模型名称。Key 使用当前 Windows 账户的 DPAPI 或 macOS 钥匙串加密，保存在被 Git 忽略的 `data/ai_settings.json` 中，不写入源代码。
-
-首页右侧提供单轮学习问答。答题页面的“问问 AI”只会发送当前题干和文字选项，不发送图片、正确答案、解析、账户信息或学习记录。每道题成功获得一次回复后不能再次询问；失败时可以重试。单次输入限制为 2500 个字符，输出限制为 320 tokens。完整控制词见 [AI 助手控制词](docs/AI_ASSISTANT_PROMPT.md)。调用第三方 API 可能产生费用，具体以 API 服务商账户为准。
-
-## 在页面中维护题库与上传图片
-
-1. 登录后从侧边栏进入“题库管理”。管理员选择公共或个人题库，普通用户维护自己的个人题库；通过学科和 ID、题干或主题搜索题目。
-2. 点击“新增题目”，填写学科、主题、难度、题干、选项和解析。学科/主题/难度可直接输入新值，选择选项前的圆钮标记正确答案。练习、错题本和预览统一使用 `A: 选项`、`B: 选项` 等字母标记，存储答案仍为原选项文本。
-3. 点击题干或某个选项下面的“上传图片”，选择本地 PNG/GIF/PPM/PGM 图片。图片会预览并复制到 `assets/uploads/`；不会移动或覆盖原图片。JPEG/WebP 请先另存为 PNG，单张限制为 10 MB、1600 万像素。
-4. 支持“添加选项”“移除最后一个选项”，至少保留两个不同且非空的选项。“查看图片”可随时预览；“移除图片”解除该字段与图片的关联。
-5. 点击“预览题目”检查内容，然后点击“保存题目”。返回首页即可选中新学科开始练习。
-6. 在列表中选中题目后可编辑或删除。已有题目的 ID 固定；删除需要确认，编辑/删除前自动备份原 JSON 到 `data/backups/`。取消编辑或关闭窗口时，未保存修改会提示确认。
-
-新题保存在 `data/questions/custom.json`；修改题目保留原来的文件归属。图片为独立资源，取消编辑或移除关联不会自动删除图片，避免损坏其他题目及备份。备份恢复步骤见 [开发维护规范](docs/DEVELOPMENT.md)。
-
-## 直接维护 JSON 题库
-
-在 `data/questions/` 下添加或编辑 UTF-8 JSON 文件，每个文件的最外层是数组。新增学科只需添加数据。修改后点击首页“重新加载题库”或重新启动。示例：
+Example JSON (top-level array):
 
 ```json
 [
@@ -184,137 +73,192 @@ python D:\develop\workplace\INT6181GroupAssessmentV2\main.py
     "topic": "Shapes",
     "difficulty": "easy",
     "type": "single_choice",
-    "question": "Which picture shows a square?",
-    "options": ["Picture A", "Picture B"],
-    "answer": "Picture B",
+    "question": "Which shape has four equal sides and four right angles?",
+    "options": ["Circle", "Square"],
+    "answer": "Square",
     "explanation": "A square has four equal sides and four right angles.",
     "question_image": null,
-    "option_images": ["assets/circle.png", "assets/square.png"]
+    "option_images": [null, null]
   }
 ]
 ```
 
-- `id` 必须在所有文件中唯一，并在题目生命周期中保持稳定，避免把旧 ID 用于完全不同的题目。
-- `subject`、`topic`、`difficulty`、`question`、`answer`、`explanation` 必须是非空字符串；筛选项自动从数据生成。
-- 当前 `type` 只接受 `single_choice`。文字题、图片题和图片选项都属于单选题。
-- `options` 至少包含两个不同的非空字符串；`answer` 必须与其中一个完全一致，大小写和空格也必须一致。
-- 两种图片字段可省略或设为 `null`。`option_images` 如为数组，长度必须与 `options` 一致，可对某个选项使用 `null`。
-- 图片路径相对于 项目根目录，仅支持项目内部文件。建议使用 PNG 或 GIF；Tk 还支持 PPM/PGM。不依赖 Pillow，因此不支持 JPEG/WebP/SVG。
-- 自带的 `assets/circle.png` 和 `assets/square.png` 是简单几何教学图。自带题目插图为 1440×810 三倍分辨率 PNG（透明底），界面按所在列宽挑选整数缩放档位放大显示，窄窗口下自动退档；其他自定义图片同样按列宽整数缩放，最高 720×405 设计像素。
-- 无效记录会跳过，并在首页显示文件名、记录序号和原因。重复 ID 保留按文件名和记录顺序遇到的第一条。不要使用“全部”或“All”作为学科、主题或难度名称，这两个文字用于界面筛选。
-- 删除题目时，已有错题记录会保留并显示“已删除或无效”；恢复相同 ID 后可以继续复习。
+Public files live under `data/questions/`; personal files live under `data/profiles/<UUID>/questions.json`. Direct JSON changes require reloading or restarting. Public additions are stored in `custom.json`. Changes preserve unrelated records; source files are backed up. Corrupt personal data is reported instead of silently overwritten.
 
-## 进度文件与错误恢复
+### 5. Daily goals, notebook and learning journal
 
-访客的 `data/progress.json`、注册账户的 `data/profiles/<账户 UUID>/progress.json` 分别保存个人记录，每份文件同时保存 `wrong` 和 `history`，使最后一题的错题状态与成绩能一次性写入。缺失时以空记录开始，首次提交自动创建。保存沿用原项目的“临时文件 + 原子替换”方案，并增加刷新到磁盘和明确错误信息。
+The home goal card shows the selected bank, subject, difficulty and progress. Its wrench opens daily-plan settings, including a daily quantity of 1-500 questions. **Continue today's practice** starts matching practice directly for the remaining quantity. Submitted answers immediately update daily activity, including submissions in an unfinished quiz. Plans and answer events are stored separately from progress.
 
-坏 JSON 或无效进度结构**不会自动覆盖**。界面会显示路径和错误：先退出应用，备份文件，修复内容后重新打开；如果希望重新开始，可手动将旧文件重命名为 `progress.backup.json`。写入失败时本题保持未提交，可修复目录权限或磁盘问题后重试。
+The wrong-question notebook belongs to the signed-in account. Repeated mistakes increase a question's count. Only a correct answer in review removes a mistake; a correct normal-quiz answer does not. Deleted questions retain a readable unavailable entry.
 
-时间使用运行设备的本地时区并携带 UTC 偏移。统计按“已完成练习中的答题次数”汇总，重复练习也计入。
+The learning journal supports likes and notes on **session records**, inclusive date-range queries, liked/note-presence filters and summary cards for the current query. Use the calendar controls or `yyyy/mm/dd`. A liked heart is blue; an unliked heart is white. Notes and likes are saved separately in `history_notes.json` without changing the legacy progress schema. Older records do not contain per-question answer details.
 
-## 测试
+### 6. Big Whale study companion
+
+Configure the HTTPS endpoint, model and protected API key in Settings. The home card offers a single-turn study question. In a normal quiz, **Ask Big Whale** provides a guiding hint on the first request and an explanation with the answer on the second. Failed requests may be retried. The companion uses thinking/correct/incorrect expressions and local encouragement after submission; the bottom answer feedback does not call an API.
+
+Normal-quiz assistance sends text only. The first hint does not include the answer key; the second request includes the reference answer and explanation. It does not send images, account credentials, profiles or learning history. Normal assistance limits input to 2,500 characters and output to 320 tokens. See [assistant prompts](docs/AI_ASSISTANT_PROMPT.md). API use requires connectivity and may incur provider charges; core practice remains offline.
+
+### 7. Quiz battles
+
+All roles can enter battles from the sidebar. Both sides answer the same public-bank question within 30 seconds. Levels are Beginner, Normal, Hard and Hell, with simulated timing ranges of 12-24, 8-18, 4-12 and 2-7 seconds respectively. Local simulation uses correctness probabilities of 50%, 72%, 88% and 97%; API levels guide checking behaviour and timing rather than guaranteeing those accuracy rates.
+
+Correct answers earn 100 points. Correct responses within 5/10/15/20/30 seconds receive +50/+40/+30/+20/+10 speed points. Wrong answers receive no correctness or speed points. Extra points are reserved for future game features. Initial HP can be 100, 200, 300, 500 or 1,000. The lower-scoring side loses HP equal to the round score difference, with a minimum of zero. Battle ends when HP is depleted or the selected questions are exhausted.
+
+**Local** is a labelled probability simulation. **API** submits a structured choice and concise decision summaries. Reading, comparing options, and choosing/checking appear as replacing activity stages, not a live transcript of internal reasoning. Choices and saved summaries are revealed after both sides finish; no second request invents a retrospective rationale. API failures, invalid decisions and late responses void the round with no points or HP changes and allow retry.
+
+API battles send the question text, options and any attached stem/option images, but not the answer key or explanation. Official DeepSeek image requests use `deepseek-flash`; text requests retain the configured model. Custom endpoints need a compatible vision model. Images must stay within the project and use PNG/JPEG/GIF/WebP, with limits of 8 MiB per image and 16 MiB total. Structured output is capped at 800 tokens. See [battle details](docs/BATTLE.md). Skill-card selection and online multiplayer are not implemented.
+
+### 8. Export reports
+
+All fixed report text, column labels, PDF metadata and footers are **English**, regardless of interface language. Question content and user notes retain their original wording. Unicode font fallback preserves Chinese text and full-width punctuation such as `！` without replacing Latin text with a CJK font.
+
+The journal exports the queried snapshot to PDF, including likes and complete notes. The notebook offers CSV and illustrated PDF exports. CSV uses UTF-8 BOM and protects spreadsheet-formula prefixes. Timestamps are converted to the machine's local timezone and displayed as `yyyy/mm/dd hh:mm:ss`; PDF states the timezone. Reports include generation time and relevant record times. Existing PDF files must be exported again to reflect changes.
+
+### 9. Display and settings
+
+Choose English or Simplified Chinese and a dark/light theme. New settings default to English and dark mode. Stored preferences are preserved. Content, usernames and paths are not automatically translated. Window settings offer automatic sizing and 960x640, 1080x720 and 1280x800 presets, compact spacing and an optional mouse-wheel selector setting. They do not change the operating system's resolution. Long content retains scrolling and navigation uses a consistent back arrow.
+
+### 10. Architecture, storage and maintenance
+
+| Area | Main modules or paths |
+| --- | --- |
+| Entry and launch | `main.py`, `learning_platform/__main__.py`, `launcher.py`, `start.bat` |
+| UI and design | `gui.py`, `modern.py`, `tokens.py`, `ui_tokens.py`, `widgets.py`, `dpi.py` |
+| Models and quiz rules | `models.py`, `services.py`, `repositories.py`, `storage.py` |
+| Accounts and moderation | `auth.py`, `bank_access.py`, `user_ui.py` |
+| Bank editor and import | `editor_ui.py`, `maintenance.py`, `importing.py` |
+| Companion and battles | `ai_assistant.py`, `battle.py`, `battle_ui.py` |
+| Journal and exports | `history_ui.py`, `history_notes.py`, `date_picker.py`, `exports.py`, `pdf_report.py` |
+| Display and images | `display.py`, `image_cache.py`, `assets/` |
+| Private account data | `data/users.json`, `data/profiles/<UUID>/` |
+| Local preferences | `data/settings.json`, `data/display.json`, `data/login_state.json`, `data/ai_settings.json` |
+
+JSON writes use atomic replacement. Keep one running instance per data directory; no multiprocess transactions are provided. Source/portrait caches are bounded, repeated redraws are avoided and timers are cancelled when the window closes. Keep real accounts, credentials, profiles and backups out of commits. Repair corrupt files or move a backup aside deliberately; do not delete user data as a troubleshooting shortcut.
+
+```powershell
+python -m unittest discover -s tests -v
+python -m ruff check .
+python -m compileall -q learning_platform tests
+```
+
+Tests use temporary data. GUI tests need Tk and a display. Ruff is a development tool and is not required to run the app. See the [test report](docs/TEST_REPORT.md), [test cases](docs/TEST_CASES.md), [development guide](docs/DEVELOPMENT.md), [design guide](DESIGN.md), [SRS](specification.md), [requirement mapping](docs/SRS.md), [integration history](docs/V2_INTEGRATION.md) and [changelog](docs/CHANGELOG.md).
+
+### 11. Limits and project history
+
+The application supports local accounts and single-choice questions, with no cloud sync or self-service password recovery. Cancelled image edits may leave unused uploads. API decisions and visual recognition can be wrong; concise summaries are not proof of correctness. One real MAT009 image request returned option 5 with three summaries; that is a connectivity check, not comprehensive model evaluation. Other operating systems and all DPI/layout combinations have not been exhaustively checked.
+
+The original CLI projects contributed atomic JSON storage, direct answer comparison and model/service/repository separation. The desktop project was extracted from `caseStudy/final`, then integrated into the current V2 directory. It ships 60 sample questions across English, Mathematics and Science, with optional pictures; new subjects can be added through data. Historical implementation notes remain in the archive and linked change records.
+
+## 中文
+
+### 1. 安装与启动
+
+使用包含 Tcl/Tk 的 Python 3.10+。Windows 可双击 `start.bat`，或执行：
 
 ```powershell
 cd D:\develop\workplace\INT6181GroupAssessmentV2
+python -m pip install -r requirements.txt
+python main.py
+```
+
+也可使用 `python -m learning_platform`；`python -m tkinter` 可检查 Tk。启动器检查 Python 版本、Tk 和题库目录，不会自动安装 Python。Linux 需要图形桌面，部分发行版需安装 `python3-tk`。核心练习使用标准库；PDF 导出需要 ReportLab。修改代码后需重启程序。
+
+### 2. 账户与权限
+
+注册使用不重复的用户名（3-32 位文字、数字、下划线或短横线）及两次一致的 6-16 位密码，用户名不区分大小写。公开注册始终创建普通用户。密码使用随机盐 PBKDF2 哈希；旧版长密码可继续登录，直到重置。
+
+| 角色 | 公共练习与对战 | 个人题库 | 错题本与学习记录 | 公共题库维护 | 全部个人题库及用户管理 |
+| --- | --- | --- | --- | --- | --- |
+| 游客 | 可以 | 不可以 | 不可以 | 不可以 | 不可以 |
+| 普通用户 | 可以 | 仅本人 | 仅本人 | 不可以 | 不可以 |
+| 管理员 | 可以 | 可以 | 本人；管理入口可查看他人 | 可以 | 可以 |
+
+已迁移的 `wutaicheng` 保留管理员身份、凭据和 UUID；新注册同名账户不会获得特权。管理员可以新增、改名、启停、调整角色、重置密码和查看学习数据。改名不改变 UUID，编辑时密码留空表示保留原密码，系统必须保留至少一个启用的管理员。
+
+受保护操作重新读取账户权限；账号停用后，已打开的个人题目编辑页也不能继续保存或删除。本地账户不能阻止有文件系统访问权限的人直接改文件。
+
+登录页恢复上次成功登录的用户名。记住密码是可选功能，使用 Windows DPAPI 或 macOS 钥匙串保护，不在用户表或受版本控制的配置中保存明文。取消勾选并成功登录会清除已记忆凭据。退出或切换账户保持个人数据隔离。
+
+### 3. 配置与答题
+
+先选题库，再选该题库的科目、主题、难度、题数和整轮限时。游客只使用公共题库。切换题库会刷新关联筛选。题目随机且不重复，超出匹配数量时使用全部可用题；空题库或无匹配时提示调整。
+
+数值控件支持直接输入和 +/-。限时为 0 表示不限时，范围 0-86400 秒。每题只能提交一次，然后继续；普通练习答对得 1 分，不倒扣，结果显示数量、正确率和分数。
+
+进度固定在上方，主要按钮固定在下方；长题目及反馈可滚动。选择或提交答案不应挤动伴学面板。只显示题目明确提供的插图，纯文字题不自动补图。
+
+中途退出保留已提交的错题，不产生完整成绩历史。限时结束会保存成绩，未答题不得分且不自动加入错题本。未完成轮次不能恢复。
+
+### 4. 题库与导入
+
+普通用户通过统一题库中心维护本人题目；公共题目供所有人练习，仅管理员可以增删改和导入。个人题目仅本人及管理员可管理，尚未开放发布为公共题目的功能。
+
+列表支持搜索和科目筛选，表单支持图片和预览。科目、主题和难度可新增；至少两个不同且非空的选项，正确答案必须与某个选项完全一致。已有 ID 不可修改，过期编辑会被拒绝。
+
+管理员可从“所有个人题库”按账户检查、新增、编辑和删除，或从用户管理选中用户后打开个人题库。写入前备份；暂不提供替其他用户批量导入。
+
+公共和个人导入均经过选择 JSON/CSV、校验、预览、明确确认。无效行显示原因，重复 ID/内容跳过；确认时重新检查权限、目标题库及当前重复项。英文界面显示 `Validation passed`。文件限制 5 MB、1000 条。
+
+- [JSON 测试文件](examples/import_test_json.json) 与 [CSV 测试文件](examples/import_test_csv.csv) 各含 3 道不同题目，可连续导入。
+- 重复导入安全跳过。
+- 错题 CSV 可导入为复习题；兼容旧版包含正确答案及不同最近错误答案的双选项转换。
+- 模板、字段和去重规则见[题库导入说明](docs/QUESTION_BANK_IMPORT.md)。
+
+编辑器接受 PNG/GIF/PPM/PGM，校验解码并限制 10 MB、1600 万像素；JPEG/WebP 上传前需转为 PNG。图片复制到 `assets/uploads/` 的独立名称，不移动原图；移除引用不会自动删除其他题目或备份可能使用的文件。
+
+JSON 示例见上方英文部分，同一格式适用于两种语言。公共题库位于 `data/questions/`，个人题库位于 `data/profiles/<UUID>/questions.json`。直接修改 JSON 后需要重新加载或重启；公共新增写入 `custom.json`。维护保留无关记录并备份；个人数据损坏时报告错误，不静默覆盖。
+
+### 5. 每日目标、错题本与学习记录
+
+首页目标卡片显示题库、科目、难度和进度；扳手打开设置，每日题量 1-500。“继续今日练习”直接抽取剩余题量。每次提交立即记录当天活动，未完成轮次也计入每日进度；计划与事件独立保存。
+
+错题本归当前登录账户所有，重复错误累加次数；只有错题复习答对才移除，普通练习答对不会移除。被删除的题目保留可读的不可用提示。
+
+学习记录对每轮练习提供点赞和笔记，可按包含首尾的日期范围、是否点赞、是否有笔记组合查询，统计卡与查询结果一致。日期使用日历或 `yyyy/mm/dd`。已点赞为蓝心，未点赞为白色空心；笔记与点赞独立保存到 `history_notes.json`，不修改旧进度结构。旧记录不包含逐题作答明细。
+
+### 6. 大肥鱼伴学助手
+
+在设置中配置 HTTPS 地址、模型和受保护的 API Key。首页支持单轮学习提问；普通答题页第一次“问问大肥鱼”给引导提示，第二次给答案及解析，失败可重试。头像随思考、答对、答错变化；提交后的鼓励及底部反馈使用本地内容，不调用 API。
+
+普通伴学仅传文字。第一次不含答案键，第二次含参考答案与解析；不发送图片、账户凭据、个人资料或历史记录。输入上限 2500 字符，输出 320 tokens；控制词见[助手说明](docs/AI_ASSISTANT_PROMPT.md)。API 需要联网且可能产生费用，核心练习无需联网。
+
+### 7. 答题对战
+
+所有角色均可进入对战，双方回答公共题库同一道题，每题 30 秒。入门、普通、困难、地狱的模拟时间分别为 12-24、8-18、4-12、2-7 秒。本地正确率分别为 50%、72%、88%、97%；API 难度控制检查要求和时间，不保证这些正确率。
+
+答对基础 100 分，5/10/15/20/30 秒内答对额外获得 50/40/30/20/10 时间分，答错无正确分或时间分；额外分接口预留。初始血量可选 100、200、300、500、1000；低分方扣除本轮分差血量，下限为 0。血量归零或题目完成后结束。
+
+Local 明确是概率模拟；API 返回结构化选项及简短决策摘要。读题、比较选项、选择检查三段提示依次替换，不代表真实内部思维。双方结束后公开选择与已保存摘要，不在结算后另外生成理由。接口失败、无效决策和迟到响应使当轮作废，不计分、不扣血，可重试。
+
+API 对战发送题干、选项及对应图片，不发送答案键或解析。官方 DeepSeek 图片请求使用 `deepseek-flash`，纯文字保留配置模型；自定义接口需要视觉模型。仅接受项目内图片，格式 PNG/JPEG/GIF/WebP，单图 8 MiB、总计 16 MiB；结构化输出 800 tokens。详见[对战说明](docs/BATTLE.md)。技能卡选择和在线多人对战尚未实现。
+
+### 8. 导出报告
+
+所有报告固定文案、字段、PDF 文档属性和页脚统一英文，不随界面语言变化；题目和用户笔记保留原文。Unicode 字体回退保留中文和全角 `！` 等标点，英文保持 Helvetica。
+
+学习记录按查询快照导出 PDF，包含点赞和完整笔记；错题本提供 CSV 和配图 PDF。CSV 使用 UTF-8 BOM 并处理公式前缀。时间统一转换到本机时区并显示为 `yyyy/mm/dd hh:mm:ss`，PDF 标明时区，含生成时间和相关记录时间。旧 PDF 需要重新导出。
+
+### 9. 显示与设置
+
+支持英文/简体中文及深浅主题，新配置默认英文、深色，已有偏好保留。题目、用户名和路径不自动翻译。窗口可自动适配或选择 960x640、1080x720、1280x800，支持紧凑布局及可选滚轮切换开关，不修改系统分辨率。长内容可滚动，主要页面使用统一返回箭头。
+
+### 10. 架构、存储与维护
+
+上方英文模块表同时列出两种语言版本对应的源码路径：入口与启动器、UI 和令牌、模型与仓库、账户与监管、导入与维护、伴学与对战、学习记录与导出、显示与图片缓存。
+
+JSON 原子替换不等于多进程事务，同一数据目录仅运行一个实例。源图和表情缓存有上限，减少重复重绘，窗口关闭时清理定时器。不要提交真实账户、凭据、个人记录和备份；数据损坏时应先备份再修复，不以删除用户数据作为默认处理。
+
+```powershell
 python -m unittest discover -s tests -v
+python -m ruff check .
+python -m compileall -q learning_platform tests
 ```
 
-仅测试业务逻辑：`python -m unittest discover -s tests -p test_core.py -v`。
+测试使用临时数据，GUI 测试需要 Tk 与图形桌面；运行软件无需 Ruff。参考[测试报告](docs/TEST_REPORT.md)、[测试用例](docs/TEST_CASES.md)、[开发规范](docs/DEVELOPMENT.md)、[视觉规范](DESIGN.md)、[主 SRS](specification.md)、[需求对应](docs/SRS.md)、[整合历史](docs/V2_INTEGRATION.md)及[变更记录](docs/CHANGELOG.md)。
 
-测试只写临时目录，不更改学习记录。GUI 测试创建真实 Tk 控件并自动调用按钮，无需手动点击；没有图形显示环境时会明确跳过 GUI 测试。实测结果见 [测试报告](docs/TEST_REPORT.md)。
+### 11. 限制与项目历史
 
-## 项目结构与模块
+当前支持本地账户和单选题，不提供云同步或自助密码找回；取消图片编辑可能遗留未引用资源。API 决策和识图可能出错，摘要不能证明答案正确。真实 MAT009 图片请求返回 5 与三段摘要，仅说明单题联通，非全面模型评测。其他系统和所有 DPI 组合尚未全面验收。
 
-```text
-INT6181GroupAssessment/
-├── main.py                      # 桌面入口
-├── pyproject.toml               # Ruff 格式与静态检查配置
-├── learning_platform/
-│   ├── __init__.py
-│   ├── __main__.py               # python -m 入口
-│   ├── models.py                # 题目数据校验、计分
-│   ├── storage.py               # JSON 读取、原子保存、文件错误
-│   ├── repositories.py          # 多文件题库与学习进度校验
-│   ├── services.py              # 随机筛选、答题状态、错题与成绩更新
-│   ├── auth.py                  # 账户、权限、状态、密码、用户管理服务
-│   ├── user_ui.py               # 管理员用户维护和学习数据查看
-│   ├── i18n.py                  # 语言切换和设置持久化
-│   ├── locales/en.json         # 英文界面目录（中文消息为键）
-│   ├── maintenance.py           # 题库维护、备份和图片导入
-│   ├── editor_ui.py             # 题库管理表单与预览
-│   └── gui.py                   # Tkinter 页面、图片加载、交互
-├── data/
-│   ├── questions/               # english / mathematics / science.json
-│   ├── users.json               # 首次注册时创建
-│   ├── profiles/                # 注册账户独立进度
-│   ├── settings.json            # 界面语言，首次保存时创建
-│   ├── account_backups/         # 管理员升级前的原账户文件
-│   ├── backups/                 # 题库编辑备份
-│   └── progress.json            # 保留原访客进度
-├── assets/                      # 示例图片及 uploads/ 导入图片
-├── tests/                       # 业务逻辑和 Tkinter 集成测试
-├── docs/
-│   ├── SRS.md                   # 指向原始完整 SRS 并记录实现决策
-│   ├── CHANGELOG.md             # 版本改动说明
-│   ├── DEVELOPMENT.md           # 模块及代码维护规范
-│   └── TEST_REPORT.md
-├── specification.md             # 权威 SRS，随 1.2 同步更新
-├── propmt.txt                   # 用户提供的提示词，原文件名保留
-├── requirements.txt             # PDF 导出依赖
-└── README.md
-```
-
-## 原项目检查与重构说明
-
-检查了 `task1/generated_program` 和 `task2/generated_software` 的源代码、题库、README、依赖及旧提示词。这两套实现基本相同：已有单选判题、JSON 分层和原子写入，但命令行只输出图片路径，缺少主题/难度配置、整轮结果、完整历史、有效数据校验和复习消除错题。未发现现有自动化测试。
-
-本项目复用了原 `JsonStore` 的原子保存方式、直接比较答案的判题方式、独立模型/仓库/服务层组织和 apple 词汇示例，针对新的 JSON schema 和界面重新整理实现。Tkinter 负责所有界面，实际显示图片和按钮。旧 `task1`、`task2` 未修改。V1 初版按当时的 SRS 排除账户；V1.1 加入本地账户与图形化维护，V1.2 加入管理员、用户管理、字母选项和语言切换，并同步更新 SRS。原进度以访客方式保留，不迁移旧 task1/task2 用户文件。
-
-新增题型时应扩展 `models.py` 的校验、`services.py` 的判题，以及 `gui.py` 的答题控件；题目筛选、存储和历史可以继续复用。
-
-## 小组演示建议
-
-1. 启动，以 wutaicheng 登录，展示管理员入口和语言切换；新增一个普通用户，验证其无法看到管理入口。
-2. 选择 Mathematics → Geometry → 2 题，展示题干图片与选项图片，故意答错一题。
-3. 展示即时反馈、禁用的提交按钮、解析和最终得分。
-4. 打开错题本，正确复习该题，展示记录移除。
-5. 打开历史，关闭并重启，展示记录持久化。
-6. 打开题库管理，新增题目和学科，上传题干/选项图片，预览保存，编辑再删除，展示备份；运行自动化测试。
-
-## 当前限制
-
-支持本地多账户及单选题，提供管理员/普通用户两种角色及管理员密码重置，不提供云同步或自助密码找回。未完成轮次不支持恢复。JSON 存储不提供多进程锁，请一次只运行一个实例。取消编辑可能留下未引用的上传图片；不会自动清理。Windows 已进行自动测试和注册页布局检查，其他系统、不同 DPI 及所有页面的逐项人工操作未全面验证。
-
-## 变更与代码规范
-
-本次版本说明见 [CHANGELOG](docs/CHANGELOG.md)，模块职责、注释维护及 Ruff 检查命令见 [DEVELOPMENT](docs/DEVELOPMENT.md)。程序运行无需安装 Ruff。
-
-## 独立项目目录
-
-2026-10-27 从 caseStudy/final 独立复制到 `D:\develop\workplace\INT6181GroupAssessment`，不依赖原 caseStudy 目录。账户、管理员权限、学习进度、题库、图片和备份均保留。原目录作为回退副本保留；两份目录今后的数据不会自动同步，请使用本目录运行和维护。
-
-2026-10-27 路径更正：正式工作目录为 `D:\develop\workplace\INT6181GroupAssessment`。此前误放的 `D:\develop\INT6181GroupAssessment` 保留为备份，后续请使用 workplace 下的正式目录。
-
-## 界面与测试更新（1.3）
-
-顶部横栏右侧的访客文字旁提供登录入口，登录后可在同一位置退出或切换账户。首页采用统计卡片和功能分区。
-
-新增用例及分组运行命令见 [TEST_CASES](docs/TEST_CASES.md)，布局维护见 [UI_GUIDE](docs/UI_GUIDE.md)。请关闭旧程序，再从本目录运行 `python main.py`；已打开的 Python 窗口不会自动加载代码修改。
-
-笔记本使用建议：进入设置 → 窗口与布局，选择自动适应屏幕并启用紧凑布局，再点击应用窗口与布局。设置会保存，重新启动后继续生效。
-
-
-2026-10-29：新增整轮限时、CSV/PDF 导出、明确的中途退出提示和 Windows 一键启动。使用方式、超时计分规则及修改文件见 [功能说明](docs/FEATURES_3567.md)。PDF 导出新增 reportlab 依赖，核心运行仍使用标准库。
-
-
-2026-10-29：题数输入改为白底黑字；勾选框使用对勾。PDF 改为蓝白报告样式，包含统计摘要、页脚页码；错题按题分页并加入题干及选项图片、答案与解析，历史使用学科配图。Windows 优先嵌入宋体，保证中文显示。
-
-
-2026-10-29 练习交互修复：题数变化同步更新开始按钮；配置页压缩为下拉学科与紧凑筛选，开始按钮固定底部；设置增加滚轮修改选项开关（默认关闭，随窗口设置保存）；答题选项只保留一个字母标记，去掉重复前缀及圆点；提交后原位切换可用的继续按钮，底部操作栏保持固定，长题目及反馈在上方内容区滚动。新增题数同步、滚轮持久化和滚动时按钮可见性回归测试。
-
-
-2026-10-29 练习布局调整：恢复紧凑学科卡片选择，固定操作栏的主要操作在左侧，返回或结束在右侧；答题进度仅保留圆点连线，移除重复矩形进度条。
-
-
-答题页进度条固定在顶部标题栏下方；题号只在标题栏显示一次。中间仅滚动题目、选项和解析，底部操作栏固定。离开答题页时移除固定进度区域。
-管理员监管个人题库：进入“题库管理 → 所有个人题库”，选择所属账户后可搜索、新增、编辑或删除题目；也可在“用户管理”选中账户，点击“管理个人题库”。修改前自动备份，普通用户仍只能管理自己的题目，原用户表结构保持不变。
+原 CLI 项目提供了原子 JSON、直接判题以及模型/服务/仓库分离基础。桌面项目从 `caseStudy/final` 独立，再整合到当前 V2 目录。附带英语、数学、科学三科 60 道配图示例，可通过数据增加新学科。旧版文档完整保存在[归档](docs/archive/README_PRE_BILINGUAL_20261113.md)及关联版本记录中，当前行为以上述英中说明为准。
