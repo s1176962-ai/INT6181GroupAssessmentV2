@@ -2,10 +2,12 @@
 
 import io
 from datetime import datetime
+from itertools import groupby
 from pathlib import Path
 from xml.sax.saxutils import escape
 
 from .history_notes import display_time
+from .models import option_label
 
 
 def build_report(kind, data, bank):
@@ -34,7 +36,7 @@ def build_report(kind, data, bank):
         font = "ReportChinese"
     body = ParagraphStyle(
         "body",
-        fontName=font,
+        fontName="Helvetica",
         fontSize=10,
         leading=16,
         textColor=colors.HexColor("#243746"),
@@ -44,6 +46,7 @@ def build_report(kind, data, bank):
     title = ParagraphStyle(
         "title",
         parent=body,
+        fontName="Helvetica-Bold",
         fontSize=24,
         leading=32,
         textColor=colors.HexColor("#146A99"),
@@ -54,7 +57,20 @@ def build_report(kind, data, bank):
     )
 
     def para(text, style=body):
-        return Paragraph(escape(str(text)).replace("\n", "<br/>"), style)
+        def needs_unicode(character):
+            try:
+                character.encode("cp1252")
+                return False
+            except UnicodeEncodeError:
+                return True
+
+        fragments = []
+        for unicode_run, characters in groupby(str(text), needs_unicode):
+            fragment = escape("".join(characters)).replace("\n", "<br/>")
+            # Keep Latin text in Helvetica while supporting full-width punctuation
+            # and Chinese content without converting or replacing user text.
+            fragments.append(f'<font name="{font}">{fragment}</font>' if unicode_run else fragment)
+        return Paragraph("".join(fragments), style)
 
     root = Path(__file__).resolve().parent.parent
 
@@ -63,7 +79,7 @@ def build_report(kind, data, bank):
             return []
         path = (root / value).resolve()
         if not path.is_relative_to(root) or not path.is_file():
-            return [para("图片不可用")]
+            return [para("Image unavailable")]
         try:
             image = Image(str(path))
             ratio = min(width / image.imageWidth, height / image.imageHeight, 1)
@@ -72,22 +88,28 @@ def build_report(kind, data, bank):
             image.hAlign = "LEFT"
             return [image, Spacer(1, 8)]
         except Exception:
-            return [para("图片无法读取")]
+            return [para("Image could not be loaded")]
 
     history = data["history"]
     total = sum(r["total"] for r in history)
     correct = sum(r["correct"] for r in history)
+    generated = datetime.now().astimezone()
+    offset = generated.strftime("%z")
     story = [
-        para("WhaleMate · 鲸伴", heading),
-        para("学习成绩报告" if kind == "history" else "错题复习报告", title),
-        para("生成时间：" + datetime.now().astimezone().strftime("%Y/%m/%d %H:%M:%S")),
+        para("WhaleMate", heading),
+        para(
+            "Learning Progress Report" if kind == "history" else "Wrong-Question Review Report",
+            title,
+        ),
+        para("Generated: " + generated.strftime("%Y/%m/%d %H:%M:%S")),
+        para("Time zone: UTC" + offset[:3] + ":" + offset[3:]),
     ]
     summary = Table(
         [
             [
-                para("完成练习：" + str(len(history))),
-                para("累计答题：" + str(total)),
-                para("正确率：" + (f"{correct / total:.1%}" if total else "—")),
+                para("Sessions: " + str(len(history))),
+                para("Questions answered: " + str(total)),
+                para("Accuracy: " + (f"{correct / total:.1%}" if total else "N/A")),
             ]
         ],
         colWidths=[170, 170, 170],
@@ -108,15 +130,15 @@ def build_report(kind, data, bank):
             story += [
                 para(f"{i:02}  {r['subject']} · {display_time(r['date'])}", heading),
                 para(
-                    f"得分 {r['score']}/{r['max_score']}    正确率 {r['accuracy']}%    正确 {r['correct']}  错误 {r['incorrect']}"
+                    f"Score {r['score']}/{r['max_score']}    Accuracy {r['accuracy']}%    Correct {r['correct']}  Incorrect {r['incorrect']}"
                 ),
-                para("模式：" + ("错题复习" if r["mode"] == "review" else "练习")),
+                para("Mode: " + ("Review" if r["mode"] == "review" else "Quiz")),
             ]
             if r.get("timed_out"):
-                story.append(para(f"超时结束 · 未答 {r.get('unanswered', 0)} 题"))
-            story.append(para("收藏：" + ("是" if r.get("liked") else "否")))
+                story.append(para(f"Time limit reached · Unanswered: {r.get('unanswered', 0)}"))
+            story.append(para("Liked: " + ("Yes" if r.get("liked") else "No")))
             if r.get("note"):
-                story.append(para("学习笔记：\n" + r["note"]))
+                story.append(para("Note:\n" + r["note"]))
     else:
         for i, (qid, r) in enumerate(data["wrong"].items(), 1):
             if i > 1:
@@ -124,34 +146,41 @@ def build_report(kind, data, bank):
 
                 story.append(PageBreak())
             q = bank.get(qid)
-            story.append(para(f"{i:02}  {qid} · 错误次数 {r['count']}", heading))
+            story.append(para(f"{i:02}  {qid} · Mistakes: {r['count']}", heading))
             if not q:
-                story.append(para("题目已从题库删除。最近答案：" + r.get("last_answer", "")))
+                story.append(
+                    para("This question was deleted. Last answer: " + r.get("last_answer", ""))
+                )
+                if r.get("last_seen"):
+                    story.append(para("Last attempted: " + display_time(r["last_seen"])))
                 continue
             story += [para(q.subject + " / " + q.topic), para(q.question)]
             story += art(q.question_image)
             for index, option in enumerate(q.options):
-                story.append(para(f"{chr(65 + index)}: {option}"))
+                story.append(para(f"{option_label(index)}: {option}"))
                 if q.option_images:
                     story += art(q.option_images[index], 170, 90)
             story += [
-                para("你的答案：" + r.get("last_answer", "")),
-                para("正确答案：" + q.answer),
-                para("解析：" + q.explanation),
-                para("最近错误：" + r.get("last_seen", "")),
+                para("Your answer: " + r.get("last_answer", "")),
+                para("Correct answer: " + q.answer),
+                para("Explanation: " + q.explanation),
+                para(
+                    "Last attempted: "
+                    + (display_time(r["last_seen"]) if r.get("last_seen") else "Not recorded")
+                ),
                 Spacer(1, 12),
             ]
     if not (history if kind == "history" else data["wrong"]):
-        story.append(para("暂无记录。"))
+        story.append(para("No records available."))
 
     def footer(canvas, doc):
         canvas.saveState()
         canvas.setStrokeColor(colors.HexColor("#D5E1EB"))
         canvas.line(42, 38, 553, 38)
-        canvas.setFont(font, 9)
+        canvas.setFont("Helvetica", 9)
         canvas.setFillColor(colors.HexColor("#607784"))
-        canvas.drawString(42, 24, "WhaleMate · 学习记录")
-        canvas.drawRightString(553, 24, f"第 {doc.page} 页")
+        canvas.drawString(42, 24, "WhaleMate · Learning records")
+        canvas.drawRightString(553, 24, f"Page {doc.page}")
         canvas.restoreState()
 
     stream = io.BytesIO()
@@ -162,7 +191,7 @@ def build_report(kind, data, bank):
         rightMargin=42,
         topMargin=36,
         bottomMargin=54,
-        title="Quiz Studio Learning Report",
-        author="Quiz Studio",
+        title="Learning Progress Report" if kind == "history" else "Wrong-Question Review Report",
+        author="WhaleMate",
     ).build(story, onFirstPage=footer, onLaterPages=footer)
     return stream.getvalue()

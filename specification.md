@@ -1,337 +1,271 @@
-# V2 当前版本说明 · 2026-10-29
+# WhaleMate - Software Requirements Specification
 
-2026-11-13：API 对战支持附带题干及选项图，必须标明图像所属选项，不向对手发送答案键或解析。官方 DeepSeek 图片请求使用视觉模型 deepseek-flash，纯文本模型配置不变。读取失败、越出项目路径、格式或大小不合法的图片不可静默忽略。Local 模拟无视觉能力，普通伴学提问仍维持文字输入。
+Version: V2 documentation consolidation, 2026-11-13.
 
-登录页面应保存上次成功登录的用户名。只有用户主动选择“记住密码”时才使用操作系统提供的用户级安全存储保存密码；仓库和用户表不得保存该密码。取消选择并成功登录后应停止自动填写密码。损坏或无法解密的本地登录状态不得阻止正常登录。
+English requirements are presented first, followed by the equivalent Chinese requirements using the same identifiers. Both parts describe the current implementation. Earlier requirements and amendments are preserved in [the specification archive](docs/archive/SPECIFICATION_PRE_BILINGUAL_20261113.md). Historical exclusions of AI features or student bank access no longer describe the current scope.
 
-正式目录：`D:\develop\workplace\INT6181GroupAssessmentV2`。运行 `python main.py`。当前采用 V2 深色界面和配图题库；保留 V2 测试，恢复窗口尺寸设置并迁入原版账户。完整差异与需求补充见 [V2 整合说明](docs/V2_INTEGRATION.md)。以下保留原版文档历史，其中旧目录、旧布局和测试数量以本说明为准。
+## English
 
-# Software Requirements Specification (SRS)
+### 1. Purpose, users and scope
 
-Version 1.3 — updated 2026-10-27: refreshed desktop layout, persistent header account navigation,
-and isolated workflow regression tests. Version 1.2 account and language requirements remain applicable.
+WhaleMate is a configurable desktop learning companion built with Python and Tkinter. Students practise single-choice questions, configure their own question banks, receive guided help from Big Whale, review mistakes and track learning sessions. Administrators maintain public content, moderate personal banks and manage local accounts. Developers maintain a separated, testable codebase.
 
-## Project Title
-Configurable Multi-Subject Python Quiz Platform
+Core practice works offline. The optional assistant and API battle opponent require a configured external service. Local simulation remains available without an API. This specification covers the existing local desktop application, not cloud identity or online multiplayer.
 
-## 1. Introduction
+### 2. Functional requirements
 
-### 1.1 Purpose
-The purpose of this project is to develop a configurable quiz platform using Python. The platform allows students to practise different subjects, answer questions, receive immediate feedback, review incorrect answers, and track their learning progress.
+#### FR-01: Navigation and home
 
-The software should be suitable for beginner-level Python developers, with a clear structure, readable code, and simple data storage.
+The sidebar shall provide Home, Start a quiz, Notebook and review, Quiz battle, Statistics and history, Question management, User management and Settings in that order, subject to role visibility. Guests shall not access personal notebooks, history or management pages. Students shall see their personal-bank centre but not user management. Main pages shall have a consistent back arrow; forms and imports return to their owning list. Home shall combine daily goals, recent learning, activity and a companion card. Guest home shall not reveal another user's records.
 
-### 1.2 Scope
-The system will provide a unified quiz experience for subjects such as English, Mathematics, and Science. Questions will be stored separately from the program so that new subjects and questions can be added without rewriting the core quiz logic.
+#### FR-02: Quiz configuration
 
-Version 1.2 provides local accounts, administrator-controlled question and user management, and a bilingual interface. Advanced AI features remain out of scope.
+Users shall choose a question bank before its available subject, topic and difficulty. Bank changes shall refresh dependent filters. Numeric fields shall accept direct typing as well as increment/decrement controls. Question count shall be positive; selection shall shuffle matching questions without repetition and cap requests at available matches. Empty banks, invalid settings or no matches shall produce useful feedback instead of starting an empty quiz.
 
-### 1.3 Target Users
-- Students who want to practise different subjects.
-- Teachers or administrators who prepare and maintain question banks.
-- Project team members who test, maintain, and extend the software.
+#### FR-03: External question data and ownership
 
-## 2. Functional Requirements
+Questions shall be loaded from UTF-8 JSON arrays, not hardcoded. Each record includes `id`, `subject`, `topic`, `difficulty`, `type`, `question`, `options`, `answer`, `explanation` and optional `question_image`/`option_images`. Only `single_choice` is currently supported. At least two distinct non-empty options and an exact answer match are required; option-image arrays shall match the option count. IDs shall be unique within a bank, and personal writes shall avoid public IDs.
 
-### FR-01: Home Menu
-The system shall provide a main menu with access to:
-- Start a quiz.
-- Review the wrong-question notebook.
-- View learning statistics and history.
-- Administrators may manage the shared question bank and local users.
-- Log out or switch between local accounts and guest mode.
-- Exit the application.
+Public questions shall be readable for practice by every role and writable only by enabled administrators. Personal questions shall be stored by owner UUID and remain inaccessible to other students. Administrators may inspect and maintain any personal bank through a clearly selected owner. Public and personal banks remain separate practice sources; publication and cross-owner batch import are not implemented.
 
-### FR-02: Subject and Quiz Configuration
-The system shall allow users to:
-- Select an available subject.
-- Select a topic or difficulty level when available.
-- Choose the number of questions.
-- Start a quiz using the selected settings.
+#### FR-03A: Daily learning plan
 
-The available choices shall be based on the question data. The system shall handle cases where no questions match the selected settings.
+A single home card shall display progress and the configured bank, subject and difficulty. A compact settings action shall open bank, subject/random subject, difficulty/all difficulty and daily quantity (1-500) controls. Continuing daily practice shall directly select random matching questions for the remaining quantity. Each successful submission immediately records activity, including submissions in unfinished sessions. Legacy plan files shall remain readable without losing events. No-match cases shall offer adjustment guidance.
 
-### FR-03: Question Bank
-The system shall load questions from external JSON files rather than hardcoding all questions into the application.
+#### FR-04: Answering and results
 
-Each question should support the following fields:
-- Unique question ID.
-- Subject.
-- Topic.
-- Difficulty.
-- Question type.
-- Question text.
-- Answer options.
-- Correct answer.
-- Explanation.
-- Optional question image.
-- Optional images for answer options.
+The quiz shall show one question, optional pictures, labelled options and progress. Each question may be submitted once. Submission shall show correctness, the correct answer and reference explanation, then enable Continue/View results in a fixed action area. Standard quizzes award one point per correct answer, without negative marks. Results shall show total/correct/incorrect counts, accuracy and score. The final successful submission shall persist the completed session even if the result page has not yet been opened.
 
-The system shall validate question data and handle missing files or invalid question formats gracefully.
+#### FR-04A: Big Whale companion
 
-Administrators shall be able to add, edit, preview, and remove questions through a graphical maintenance page. Direct JSON maintenance remains supported.
+The home page shall offer a single-turn study question. Normal quiz assistance shall provide an answer-free guiding hint first, then a reference-grounded explanation and answer on a second successful request; failures may be retried. Thinking, correct and incorrect expressions shall match the current state. Submission encouragement and bottom feedback shall use local data without additional API requests.
 
-Public questions shall be readable by all users and maintainable only by administrators. Personal questions shall be stored under the current account UUID and shall not be visible to another account. Public and personal banks shall remain separate practice sources.
+Normal assistance sends text only. The first hint excludes the reference answer/explanation; the second includes them. No profile, credential or learning-history data shall be sent. Endpoint/model/key shall be configurable via HTTPS, with OS-protected credentials excluded from source control. Normal requests shall have 2,500-character input and 320-token output limits and run outside the UI thread. English UI instructions shall request English replies. Source question content remains unchanged.
 
-Authenticated administrators and students shall use one question-bank centre. Administrators may switch between public and personal banks; students may only manage their own personal bank. Personal-bank management shall support listing, searching, creating, editing, deleting, image attachment and preview-first JSON/CSV import. Guests shall not see question-bank or user-management navigation, and students shall not see user management.
+#### FR-05: Optional images
 
-The supplied JSON and CSV templates shall be covered by automated import tests. Administrators shall be able to import those formats into the public bank through the same validation, preview, duplicate-protection and confirmation workflow used by personal imports. Wrong-question CSV exports shall contain a complete importable single-choice question structure while retaining mistake metadata. Legacy wrong-question CSV rows with a correct answer and a different last answer should be accepted as two-option review questions.
+The UI shall support images for both question stems and options, keep them associated with the correct option, and scale illustrations to the available area. Text-only questions shall not acquire invented illustrations. Missing or invalid images shall produce a readable fallback without crashing. Paths shall resolve within the project. Transparency shall work in dark/light themes.
 
-All main pages except the home page shall provide a consistent back action at the left of the top title. Child forms and imports shall return to their owning list; top-level sections shall return home.
+#### FR-06: Wrong-question notebook
 
-### FR-03A: Daily Learning Plan
+Only signed-in users may access their profile's notebook. Incorrect submissions shall be persisted immediately and deduplicated by question ID, increasing the mistake count on repeated errors. Normal correct answers shall not remove mistakes; correct answers in review shall remove them. Users may review an individual question or all available mistakes. Deleted questions shall retain their record with an unavailable notice. Guests shall not read shared or other users' notebooks.
 
-The home page shall present progress and daily-plan settings in one card. The card shall show the selected question bank, subject and difficulty, and provide a compact settings action. Users shall be able to select a public or personal bank, a subject or random subjects, a difficulty or all difficulties, and a daily quantity from 1 to 500.
+#### FR-07: Learning history
 
-Continuing the daily practice shall directly select random matching questions for the remaining daily quantity. The application shall explain when the selected bank is empty or no questions match. Existing learning-plan files containing only `daily_goal` and `answers` shall remain readable without losing answer events.
+Completed quiz and review sessions shall persist their identity, local-aware timestamp, subject, question totals, accuracy and score. History shall remain account-isolated across restarts. Manually abandoned incomplete sessions shall not appear as completed history, while already-submitted mistakes remain available. Session timeout shall save partial results and unanswered counts; unanswered questions shall not automatically become mistakes.
 
-### FR-04: Quiz Interface
-The system shall:
-- Display the current question and its answer options.
-- Support single-choice questions in the initial version.
+#### FR-07A: Likes, notes and queries
 
-### FR-04A: AI Study Assistant
+Authenticated users shall like and annotate session records. Existing history lacks individual answer details, so annotations apply to sessions rather than invented per-question history. Notes/likes shall be persisted separately from the legacy progress schema. Inclusive local-date ranges, liked status and note presence shall be combinable filters. Calendar pickers and manual `yyyy/mm/dd` entry shall be supported. Summary cards and PDF exports shall reflect the selected query snapshot. Liked hearts shall be blue and unliked hearts white. An unfiltered like toggle shall update locally without rebuilding every record.
 
-### Learning Journal Update (2026-11-13)
+#### FR-08: Persistence and recovery
 
-Authenticated users may like and annotate individual session records. Annotations shall be isolated by account and persisted independently of legacy progress. Queries shall combine inclusive local-date ranges with liked and note-presence filters. On-screen timestamps and PDF timestamps shall use the same local-time conversion and `yyyy/mm/dd hh:mm:ss` formatting. Summary cards shall reflect the displayed query. Journal exports shall offer PDF only and include the displayed query snapshot and notes. Legacy sessions without individual answer details remain session-level records.
+JSON writes shall use atomic replacement. Accounts shall use stable UUID-based directories; renaming shall not detach data. Corrupt account, personal-bank or progress data shall be reported and preserved. Missing files shall receive safe defaults where appropriate. Existing user-table and progress schemas shall not be changed for notes or personal-bank moderation. Backups shall be created before bank mutations. Atomic writes do not provide multi-process transactions.
 
-The system shall provide an optional DeepSeek-compatible study assistant on the home and quiz pages. API endpoint, model and API Key shall be configurable; the Key shall be protected by the operating-system account and excluded from version control.
+#### FR-09: Validation and import
 
-Quiz assistance shall send only the current question text and textual options. It shall not send images, correct answers, explanations, account details or learning records. A successful response shall disable further AI requests for that question; a failed request may be retried. Requests shall run outside the UI thread and enforce bounded input and output sizes.
-- Allow users to select and submit an answer.
-- Immediately display whether the answer is correct or incorrect.
-- Show the correct answer and explanation after submission.
-- Provide a button to move to the next question.
-- Display the current question number and total question count.
-- Display the final result when the quiz is completed.
-
-Users shall not accidentally submit multiple answers for the same question.
-
-### FR-05: Image Support
-The system shall support optional images in questions and answer options.
-
-Image paths shall be stored in the question data. If an image is missing or cannot be loaded, the application shall display a readable fallback rather than crashing.
-
-Text-only questions shall continue to work normally.
-
-### FR-06: Wrong-Question Notebook
-The system shall:
-- Record questions answered incorrectly.
-- Display saved incorrect questions.
-- Show answer options, correct answers, and explanations.
-- Allow users to practise saved incorrect questions again.
-- Update the wrong-question status when a question is answered correctly during review, according to the project's chosen review rule.
-- Persist the notebook between application sessions.
-
-Repeated incorrect answers should not create duplicate entries for the same question ID.
-
-### FR-07: Score and Learning History
-After each quiz, the system shall display:
-- Total questions.
-- Number of correct answers.
-- Number of incorrect answers.
-- Accuracy percentage.
-- Total score.
-
-The system shall save quiz history, including the date and time, subject, number of questions, and result. Users shall be able to view previous quiz results after restarting the application.
-
-### FR-08: Data Persistence
-The system shall use simple local files, such as JSON, to store question data, wrong-question records, and learning history.
-
-The application shall create required data files or handle their absence safely. Invalid saved data shall produce a useful error message rather than an unexplained crash whenever practical.
-
-### FR-09: Input Validation and Error Handling
-The system shall handle:
-- Empty question banks.
-- Invalid quiz settings.
-- Missing or invalid question fields.
-- Invalid user selections.
-- Missing image files.
-- Missing or malformed saved progress files.
-
-The application should remain usable after recoverable errors.
-
-### FR-10: Local Registration and Login
-- Show a login page at startup, with registration and guest entry.
-- Require a unique, case-insensitive username (3–32 word characters or hyphens), a password of 6–16 characters, and matching confirmation during registration.
-- Store randomly salted PBKDF2-HMAC-SHA256 password hashes, never plaintext passwords.
-- Support logout and account switching; do not remember plaintext passwords.
-- Store each account's wrong notebook and history in a separate UUID-based profile directory.
-- Preserve existing `data/progress.json` as guest progress. Do not silently migrate or overwrite it.
-- Malformed account data shall produce a useful error without overwriting the file.
-- Accounts are local learning profiles, not a security boundary against someone with filesystem access. No cloud identity or password recovery is required.
-
-### FR-11: Graphical Question-Bank Maintenance
-- Only enabled administrators may view or use question maintenance. Ordinary accounts and guests do not see its navigation entry. Re-check persisted authorization before mutation and image upload.
-- List questions with ID, subject, topic, difficulty, and text. Provide subject filtering and ID/text/topic search.
-- Provide a form for required fields, question and option images, a selectable correct answer, and a preview.
-- Allow new subject/topic/difficulty values without code changes. Reserve the UI label `全部` for filters.
-- Allow adding/removing options with at least two unique non-empty options; require a valid correct answer.
-- Keep an existing question's ID immutable, reject duplicate IDs, and detect stale edits.
-- Confirm deletions and discarding unsaved form edits.
-- Save new records to `custom.json`; edit/delete records in their source file while preserving unrelated and extension fields.
-- Back up an existing source file outside the scanned question directory before replacing it. If backup fails, do not modify the original.
-- Apply changes immediately and persist across restarts. Deleted questions' notebook records remain with an unavailable notice.
-
-### FR-12: Local Image Import
-- Provide file selection, preview, replace and remove controls for both question images and each answer option.
-- Support PNG, GIF, PPM and PGM without third-party runtime dependencies; JPEG/WebP must first be converted to PNG.
-- Validate decoding before copying, with a 10 MB file limit and a 16-million-pixel limit.
-- Copy images to unique filenames under `assets/uploads/` and store project-relative paths. Never move or overwrite the selected source file.
-- Cancelling the file dialog leaves the image unchanged; invalid images show an error and leave the form usable.
-- Removing an image detaches its reference. Do not automatically delete files that may be referenced by other questions or backups; unused uploads may remain after cancelled edits.
-
-### FR-13: Expanded Example Content
-- Ship 60 single-choice questions: 20 each for English, Mathematics and Science.
-- Cover easy, medium and hard levels, multiple topics, explanations and image demonstrations.
-- Preserve the IDs and content of the original 15 sample questions.
-
-### FR-14: Administrator Permissions and User Management
-- Support `admin` and `student` roles, plus an `enabled` boolean status. Legacy records default to enabled students.
-- Upgrade the existing `wutaicheng` account to administrator once, retaining its UUID, password hash and progress. Back up the original account file. Do not hardcode privilege by username or auto-promote future registrations.
-- Public registration always creates a student. The interface hides question and user management from students and guests; service-level checks re-read the current account before privileged operations.
-- Only administrators may list accounts, inspect another account's history and wrong notebook, add accounts, rename accounts, reset passwords, enable/disable login, or grant/revoke administrator status.
-- Show only account identity, role, status and learning data; never show password hashes, salts or plaintext passwords.
-- Renaming preserves UUID-based progress. Empty password input during editing retains the old hash; new/reset passwords must be 6–16 characters with matching confirmation.
-- For compatibility, previously stored longer passwords continue to authenticate until reset; the application does not know their plaintext length from hashes.
-- Disabled accounts cannot log in. Existing sessions are checked on subsequent protected actions and quiz submission; disabled sessions return to login without saving a new answer.
-- Reject any update that would leave no enabled administrator. Losing administrator status also prevents previously opened editors from saving.
-
-### FR-15: Lettered Answer Options
-- Display options as `A: text`, `B: text`, `C: text`, `D: text` in quizzes, notebooks and previews.
-- Use the same letter labels in editor option groups, continuing through Z and AA if needed.
-- Change presentation only; stored answer text and correctness checks remain unchanged.
-
-### FR-16: Interface Language Settings
-- Provide Settings / Language from both the login page and home screen.
-- Offer Simplified Chinese and English. Apply a saved choice immediately to newly rendered screens and remember it in local `data/settings.json` across restarts.
-- Translate login, navigation, quiz feedback/results, notebook/history, question and user management, confirmations and ordinary account errors using an explicit catalog.
-- Preserve question content, subjects, topics, usernames and paths exactly as data; language switching is not question translation.
-- Preserve language-independent role/status values in storage and reserve both `全部` and `All` as filter labels.
-- Handle a missing settings file with the Chinese default. Warn about malformed settings and do not silently overwrite them.
-
-## 3. Non-Functional Requirements
-
-### NFR-01: Usability
-The interface shall be simple and understandable for students. Navigation, buttons, and feedback messages shall use consistent wording.
-
-### NFR-02: Maintainability
-The program shall separate major responsibilities, such as question management, quiz flow, answer checking, progress tracking, and user interface.
-
-The implementation should avoid unnecessary complexity and duplicated logic.
-
-New and modified modules shall use consistent formatting, sorted imports, meaningful names and docstrings. Comments shall explain persistence, identity and data-preservation rules. Maintain a versioned change log and keep the SRS, README and tests consistent with behavior.
-
-### NFR-03: Extensibility
-Adding another subject should primarily require adding question data. Adding a new question type should not require rewriting the entire application.
-
-### NFR-04: Reliability
-The application shall not crash during normal quiz use or when recoverable data errors occur.
-
-### NFR-05: Testability
-Major functions shall be testable independently. Automated tests shall cover answer checking, scoring, question selection, wrong-question handling, and data persistence where practical.
-
-### NFR-06: Compatibility
-The application shall run in the team's agreed Python environment and include clear setup and execution instructions.
-
-## 4. Technical Constraints
-
-- Use Python as the main programming language.
-- Inspect the existing project and preserve useful code where practical.
-- Reuse the existing interface technology if it is suitable and maintainable.
-- If the current implementation is unsuitable, use one consistent, beginner-friendly interface technology, preferably Tkinter for a desktop application.
-- Use JSON for simple local data storage.
-- Avoid unnecessary third-party dependencies.
-- Do not require an online service or API for the core quiz functions.
-- Include local accounts and the question editor in version 1.2. Do not include AI-generated question services, leaderboards, or cloud synchronisation.
-
-## 5. Project Deliverables
-
-The completed project shall include:
-
-1. A runnable Python quiz application.
-2. A configurable question bank with sample questions for at least three subjects.
-3. Support for text-based single-choice questions.
-4. Optional question and answer-option images.
-5. A wrong-question notebook with review functionality.
-6. Quiz results and persistent learning history.
-7. Automated tests for the main functions.
-8. A README containing installation, execution, usage, and data-format instructions.
-9. This updated SRS document.
-10. A test report summarising test cases, results, and known limitations.
-11. A local registration/login interface, account-isolated progress, graphical question editor and image import controls.
-12. A change log, coding conventions and automated formatting/static-check configuration.
-
-## 6. Acceptance Criteria
-
-The project will be considered complete when:
-
-1. The application starts successfully using the documented instructions.
-2. Users can select a subject and configure a quiz.
-3. The application loads questions from external data files.
-4. Users can answer questions and receive immediate correctness feedback.
-5. The final score and accuracy are calculated correctly.
-6. Incorrect answers are recorded in the wrong-question notebook.
-7. Users can review and retry incorrect questions.
-8. Wrong-question records and quiz history persist after restarting the application.
-9. At least one sample question demonstrates image support.
-10. Questions from at least three subjects can be loaded without changing the core quiz logic.
-11. Automated tests run successfully, with any remaining failures clearly documented.
-12. The README explains how to run the application and add questions.
-13. Users can register, log out, log in again and see account-isolated progress; guest progress remains available.
-14. Administrators can search, add, edit, preview and delete questions in the GUI with validation and backups.
-15. Imported images display in saved questions after restarting the application.
-16. All 60 sample questions load; tests cover accounts, maintenance, backups, failed writes and image imports.
-17. wutaicheng retains its credentials and progress and can open user and question management; ordinary users cannot access either.
-18. Administrators can create/edit/disable/re-enable/promote/demote accounts and inspect progress; tests reject unauthorized actions and removal of the last enabled administrator.
-19. Quiz, notebook and preview options use letters and separators.
-20. Chinese/English switching persists and preserves question data; tests cover both languages and the 6/16-character password boundaries.
-
-## 7. Out of Scope for Version 1.2
-
-The following features are not required for the initial release:
-- AI-generated questions or AI tutoring.
-- Online multiplayer or classroom competition.
-- Cloud storage and online account registration (local registration is included).
-- Complex teacher administration dashboards.
-- Advanced analytics or adaptive learning algorithms.
-- Support for every possible question type.
-
-These features may be considered in future versions after the core application is stable.
-
-## 8. Interface and regression requirements (Version 1.3)
-
-- The top header shall display guest identity with an adjacent login action; authenticated users shall see their name and a logout/switch-account action.
-- Login navigation shall open the account form. Logout shall clear the active account and restore the guest progress path.
-- Primary actions, keyboard focus, selected answers and feedback shall be visually distinguishable.
-- Home shall present progress summaries and responsive feature cards; long pages shall remain scrollable.
-- Workflow unittest cases shall use temporary data and verify quiz persistence, account isolation, authorization and question-bank maintenance.
-
-### 8.1 Laptop display preferences
-
-Settings shall offer automatic sizing and 960x640, 1080x720, 1280x800 presets, capped to the current screen with taskbar space reserved. Compact layout shall be enabled by default and configurable without changing system display resolution. Preferences shall persist locally; long content shall retain scrolling.
-
-The four standard home actions shall use a two-by-two grid at normal window widths. Compact administrator views may use three columns for six actions; narrow windows shall fall back to one column.
-
-
-2026-10-29：新增整轮限时、CSV/PDF 导出、明确的中途退出提示和 Windows 一键启动。使用方式、超时计分规则及修改文件见 [功能说明](docs/FEATURES_3567.md)。PDF 导出新增 reportlab 依赖，核心运行仍使用标准库。
-
-
-2026-10-29：题数输入改为白底黑字；勾选框使用对勾。PDF 改为蓝白报告样式，包含统计摘要、页脚页码；错题按题分页并加入题干及选项图片、答案与解析，历史使用学科配图。Windows 优先嵌入宋体，保证中文显示。
-
-
-2026-10-29 练习交互修复：题数变化同步更新开始按钮；配置页压缩为下拉学科与紧凑筛选，开始按钮固定底部；设置增加滚轮修改选项开关（默认关闭，随窗口设置保存）；答题选项只保留一个字母标记，去掉重复前缀及圆点；提交后原位切换可用的继续按钮，底部操作栏保持固定，长题目及反馈在上方内容区滚动。新增题数同步、滚轮持久化和滚动时按钮可见性回归测试。
-
-
-2026-10-29 练习布局调整：恢复紧凑学科卡片选择，固定操作栏的主要操作在左侧，返回或结束在右侧；答题进度仅保留圆点连线，移除重复矩形进度条。
-
-
-答题页进度条固定在顶部标题栏下方；题号只在标题栏显示一次。中间仅滚动题目、选项和解析，底部操作栏固定。离开答题页时移除固定进度区域。
-# 2026-11-13 个人题库监管补充
-
-管理员可通过题库管理的“所有个人题库”按用户检索、新增、修改和删除个人题目，也可从人员管理直接进入选中用户题库。个人题目仍不向其他普通用户公开。服务层每次访问重新核验管理员权限和所属账户，管理员撤权后禁止继续维护他人题库；写入前自动备份，用户表结构不变。人员管理统一统计卡、表格和固定操作栏样式。跨账户批量导入不在本次范围内。
-
-# 对战决策补充 · 2026-11-13
-
-API 对手应基于当前题干及选项提交结构化选项决策和简短依据，不接收答案键或图片。决策先保存，双方结束后公开，不得通过结算后的第二次生成替换原作答依据。题库解析另列。Local 必须标明概率模拟身份，不伪装成模型分析。等级不再强制模型随机答错，模拟等待时间与实际接口耗时应予以区分。
+Imports shall support JSON and CSV with a 5 MB/1,000-record limit, validation, row-level preview and explicit confirmation. Duplicate IDs and content shall be skipped; malformed headers, column mismatches and invalid fields shall be identified. Confirmation shall recheck current permission, target ownership and duplicates. A preview for one target shall not be applied to another. Public import remains administrator-only. Official templates, separate demonstration files and compatible wrong-question CSV round trips shall be tested. English preview messages shall include `Validation passed`.
+
+#### FR-10: Registration, login and remembered credentials
+
+Registration shall require a unique case-insensitive username (3-32 word characters or hyphens), a 6-16-character password and matching confirmation. Passwords shall use random salts and PBKDF2-HMAC-SHA256 hashes. Public registration shall always create a student, regardless of username. Legacy longer passwords shall continue to authenticate until reset. Startup shall offer login, registration and guest entry; logout/account switching shall preserve isolation.
+
+The form shall restore the last successful username. Remember password shall be opt-in and use OS account protection (Windows DPAPI/macOS Keychain), not plaintext in the user table. Successful login with the option unchecked shall clear the remembered password. Corrupt or undecryptable preferences shall not block ordinary login. Existing guest progress shall be preserved without exposing it through guest notebook/history pages or silently assigning it to a new account.
+
+#### FR-11: Graphical maintenance and moderation
+
+Students and administrators shall share one bank editor with list/search/filter/create/edit/delete/image/preview operations. Students may maintain only their own bank. Administrators may maintain public and all personal banks, with an explicit owner selector and a direct entry from user management. Existing question IDs are immutable; duplicate IDs and stale edits shall be rejected. Unsaved changes and deletions require confirmation. Public edits preserve source-file ownership and extension fields. Failed backups shall not modify the original bank. Every personal save/delete shall revalidate the current session, including an already-open editor after account disablement.
+
+#### FR-12: Local image import
+
+The editor shall accept PNG/GIF/PPM/PGM with a 10 MB and 16-million-pixel limit, validate decoding, and copy files to unique names under `assets/uploads/`. JPEG/WebP need conversion before editor upload. Source files shall not be moved or overwritten. Cancelled dialogs or invalid uploads shall preserve the previous field. Detaching an image shall not automatically delete potentially shared or backed-up files; unused uploads may remain.
+
+#### FR-13: Example content
+
+The application shall retain 60 example single-choice questions: 20 each for English, Mathematics and Science, covering multiple topics, easy/medium/hard difficulties, explanations and optional illustrations. Original sample IDs/content shall be preserved. Adding another subject shall primarily require data, not core-code changes.
+
+#### FR-14: Roles and user administration
+
+Accounts shall have persisted `admin`/`student` roles and an `enabled` status. The previously migrated `wutaicheng` account shall retain its UUID, credential hash and progress; future registration of that name shall never auto-promote. Administrators may list/create/rename/enable/disable/promote/demote accounts, reset passwords and inspect learning data. They shall never see plaintext passwords, hashes or salts in the UI. Password edits left empty retain the existing credential; reset confirmation and length rules still apply.
+
+The application shall keep at least one enabled administrator. Privileged services shall re-read account state rather than trusting a cached role. Disabled accounts shall not log in or write from an existing session. Losing administrator status shall prevent further edits to other users' or public content. Local roles are not a security boundary against direct filesystem access.
+
+#### FR-15: Option labels
+
+Options shall use A/B/C/D and continue through Z/AA where required, with a readable separator or separate letter column. Repeated letter prefixes and native selection markers shall not duplicate the same label. Presentation changes shall not alter stored answer text or correctness comparisons. Reports and editor previews shall retain unambiguous labels.
+
+#### FR-16: Language and theme
+
+English shall be the default interface language for new settings, with Simplified Chinese available. Saved choices shall persist and apply to newly rendered pages. Login, navigation, configuration, feedback, management and import diagnostics shall be translated via the catalog. Stored role/status values are language independent. Question content, usernames and paths shall not be automatically translated. Dark/light themes shall remain supported; existing preferences shall not be discarded because defaults changed.
+
+#### FR-17: Quiz battles and decision records
+
+All roles may battle against a local simulation or an optional API opponent using existing public-bank questions. Both sides receive the same question and a 30-second deadline. Correct answers earn 100 points plus speed bonuses of 50/40/30/20/10 within 5/10/15/20/30 seconds; wrong answers earn no correctness/speed points. Extra points remain an extension field. Initial HP choices are 100/200/300/500/1,000. The lower round score loses HP equal to the difference, bounded at zero. HP depletion or question exhaustion ends the match.
+
+Local levels use probabilities 50%/72%/88%/97% and simulated timing ranges 12-24/8-18/4-12/2-7 seconds. API levels guide checking behaviour and simulated timing without guaranteeing those accuracy rates. API output shall bind question ID, selected option, simulated time and concise decision summaries. Reading, option comparison and choosing/checking are replacing UI activity stages, not a live internal reasoning trace. Answer-related content stays hidden until both sides finish. Results shall show the stored decision and separate reference explanation, not a newly invented retrospective justification.
+
+API battles may send stem/option images together with text, but never the answer key or reference explanation. Images shall be labelled, remain inside the project, use PNG/JPEG/GIF/WebP, and be limited to 8 MiB per image/16 MiB total. Official DeepSeek image requests use `deepseek-flash`; custom endpoints need a compatible model. Structured output is capped at 800 tokens. Invalid or failed responses and responses received at/after the deadline shall void the round with no points or HP change and allow retry. These API decisions remain fallible. Online multiplayer and skill-card selection are future work.
+
+#### FR-18: English exports and timestamps
+
+All report templates, fixed fields, PDF metadata and footers shall be English regardless of UI language; source questions, explanations and notes shall retain their wording. Journal export shall be PDF-only and include the queried snapshot, likes and complete notes. Notebook export shall include importable CSV and illustrated PDF with options, answers, explanation, counts and last-attempt time. Deleted questions shall have readable English fallback text.
+
+CSV shall use UTF-8 BOM and neutralize formula prefixes. Generation and record timestamps shall consistently use the machine's local timezone and `yyyy/mm/dd hh:mm:ss`; PDF shall state the timezone. Raw ISO timestamps shall not appear as record display text. Unicode font fallback shall preserve Chinese and full-width punctuation without black missing-glyph squares for supported characters. Changed report code does not alter PDFs already exported.
+
+#### FR-19: Responsive layout and input
+
+Window settings shall offer automatic sizing and 960x640/1080x720/1280x800 presets bounded to the display, compact spacing and a persistent optional wheel-selector setting. They shall not change OS resolution. Controls in paired rows shall align despite wrapped titles. Primary quiz/battle actions shall remain reachable without scrolling long content; question/feedback regions retain their own scrolling. Results shall not push the next button offscreen. Display preferences shall persist and theme changes shall preserve current answers.
+
+### 3. Non-functional requirements
+
+- **NFR-01 Usability:** consistent navigation, visible primary actions/focus, compact readable layouts, accessible overflow and clearly differentiated feedback.
+- **NFR-02 Maintainability:** separate models, persistence, services, UI, imports, moderation and exports; meaningful names, comments for identity/data-preservation decisions, updated README/SRS/changelog/tests, and Ruff checks. Compatibility re-exports and historical backups shall be handled explicitly by tooling.
+- **NFR-03 Extensibility:** new subjects use data; new types extend validation, grading and UI without duplicating storage. Extra battle scores and future public publishing shall have clear boundaries.
+- **NFR-04 Reliability/performance:** recoverable errors preserve source data; failed/late API requests do not penalize HP. Network work runs outside Tk's UI thread. Caches are bounded, unnecessary repainting is avoided, timers are cleaned up at shutdown, and like toggles avoid whole-page reconstruction when filters permit.
+- **NFR-05 Testability:** temporary-data unit/integration tests cover grading, selection, persistence, imports, backup failure, role revocation, disabled sessions, UI language, exports, timestamps, caches and battle error handling. Automated network tests use mocks; real API checks are documented separately.
+- **NFR-06 Compatibility:** Python 3.10+, Tk and a graphical desktop; core operation uses the standard library, with ReportLab for PDFs. Windows is the primary tested environment. No hidden cloud dependency for practice.
+
+### 4. Deliverables and acceptance
+
+Deliverables are the runnable application, sample banks/images, import templates, local-account administration, personal-bank moderation, daily plans, notebook/journal, optional companion and battle modules, English reports, automated tests, bilingual README/SRS, coding guidance and test/change records.
+
+Acceptance requires documented startup; data-driven public/personal selection; correct single-submit grading and persistence; notebook removal only during correct review; guest/account isolation; permissions rechecked after disablement/demotion; backup/stale-edit protection; import validation and round trips; fixed primary actions; bilingual UI with original question content preserved; guided two-request assistance; API choices and images correctly bound to the current question; void late/failed battle rounds; English exports with readable local timestamps, pictures and notes; and successful checks with limitations recorded in the test report.
+
+### 5. Boundaries and history
+
+No cloud sync, self-service password recovery, online multiplayer, resumable incomplete session, adaptive learning engine, generated-question service, skill-card selection or general public-publishing workflow is claimed. JSON atomic replacement is not multi-process locking. Unused image files may remain. API latency, accuracy and visual understanding are not guaranteed. One real MAT009 visual decision returning 5 with three summaries is a limited integration check, not a general accuracy claim.
+
+The project retains its earlier CLI/desktop history, migrated accounts, source banks and documented changes. Read [implementation mapping](docs/SRS.md), [README](README.md), [changelog](docs/CHANGELOG.md) and [test report](docs/TEST_REPORT.md) alongside this SRS. Older documents are historical evidence, not current permission or feature rules.
+
+## 中文
+
+### 1. 目的、用户与范围
+
+WhaleMate 是使用 Python/Tkinter 的可配置桌面伴学软件，支持单选练习、自由题库配置、大肥鱼引导式帮助、错题复习和学习记录。管理员维护公共内容、监管个人题库和管理本地账户，开发者维护分层且可测试的代码。
+
+核心练习离线运行；可选伴学和 API 对战需要外部服务，本地模拟无需 API。本规格描述本地桌面应用，不包含云身份或在线多人系统。
+
+### 2. 功能需求
+
+#### FR-01：导航与首页
+
+侧栏顺序为首页、开始练习、错题本、答题对战、学习记录、题库管理、用户管理、设置，并按角色隐藏无权入口。游客不可查看个人错题、历史或管理页；普通用户可维护本人题库但无用户管理。主要页提供统一返回箭头，表单/导入返回所属列表。首页整合每日目标、最近学习、活动及伴学卡片，不向游客显示他人记录。
+
+#### FR-02：练习配置
+
+先选择题库，再加载对应科目、主题和难度；切换题库刷新关联筛选。数字可直接输入或使用加减按钮。题量为正整数，匹配题随机且不重复，超出时使用可用数量。空题库、非法配置或无匹配时给出可恢复提示，不启动空练习。
+
+#### FR-03：外部题目与归属
+
+从 UTF-8 JSON 数组读取题目，包含 `id`、`subject`、`topic`、`difficulty`、`type`、`question`、`options`、`answer`、`explanation` 和可选图片字段。目前仅支持 `single_choice`；至少两个不同非空选项，答案完全匹配选项，选项图数组与选项数一致。库内 ID 唯一，个人写入避免公共 ID。
+
+公共题目供所有角色练习，仅启用管理员可写；个人题库按 UUID 保存，不向其他普通用户开放。管理员明确选择所属账户后可以监管。两种题库保持独立来源，尚未实现公开发布和跨所属账户批量导入。
+
+#### FR-03A：每日计划
+
+首页单卡显示进度、题库、科目和难度，紧凑设置入口配置公共/个人题库、科目或随机、难度或全部及 1-500 题每日量。继续练习直接抽取剩余匹配题，每次成功提交立即保存活动，未完成轮次也计入每日进度。旧计划兼容且不丢事件，无匹配时提示调整。
+
+#### FR-04：答题与结果
+
+显示单题、可选图片、字母选项和进度，每题仅提交一次。提交后显示正误、正确答案及题库解析，并在固定操作区启用继续/结果。普通练习答对 1 分，不倒扣，结果显示总数、正确、错误、正确率和分数。最后成功提交立即保存完整轮次，不依赖打开结果页。
+
+#### FR-04A：大肥鱼伴学
+
+首页支持单轮问答；普通练习第一次给不揭晓答案的引导提示，第二次给依据参考答案的讲解，失败可重试。头像对应思考、答对、答错。提交鼓励及底部反馈使用本地内容，不额外调用 API。
+
+普通伴学仅传文字，首问不含参考答案/解析，第二次包含；不发送个人资料、凭据或历史。HTTPS 地址、模型及受系统保护的 Key 可配置并排除版本控制。普通输入 2500 字符、输出 320 tokens，网络请求在 UI 线程外运行。英文界面使用英文控制词要求英文回复，题目原文不改。
+
+#### FR-05：可选图片
+
+题干和选项图须关联正确选项并按可用区域缩放。文字题不补造插图；缺失或损坏图片给可读回退，不崩溃。路径限制在项目内，透明图支持深浅主题。
+
+#### FR-06：错题本
+
+仅登录用户可访问本人错题本。错误提交立即持久化，按题目 ID 去重并累加次数；普通练习答对不移除，错题复习答对才移除。支持单题或全部复习；删除题目保留不可用记录，游客不得读取共享或他人错题。
+
+#### FR-07：学习历史
+
+完成练习/复习保存身份、带时区时间、科目、数量、正确率和分数，重启后按账户隔离。手动退出未完成轮次不入完整历史，但保留已提交错题。限时结束保存部分结果与未答数量，未答不自动记错。
+
+#### FR-07A：点赞、笔记与查询
+
+登录用户可点赞和记录每轮笔记；旧历史没有逐题明细，不得虚构逐题历史。元数据独立保存，支持包含首尾的本机日期范围、点赞和笔记状态组合查询、日历与手工日期输入。统计及 PDF 与查询快照一致。点赞蓝心、未点赞白心；无点赞筛选时局部更新，避免重建列表。
+
+#### FR-08：持久化与恢复
+
+JSON 使用原子替换，UUID 目录在改名后保持不变。损坏账户、个人题库和进度应报告且保留，适当处理缺失文件。笔记和个人监管不改变旧用户表/进度结构，题库修改前备份。原子写入不等于多进程事务。
+
+#### FR-09：校验与导入
+
+JSON/CSV 限制 5 MB、1000 条，经过校验、逐行预览和明确确认。重复 ID/内容跳过，错误表头、列数和字段显示诊断。确认时复查权限、归属和重复项，禁止跨目标题库套用预览。公共导入仅管理员。官方模板、演示文件和错题 CSV 回导纳入测试，英文校验结果显示 `Validation passed`。
+
+#### FR-10：注册、登录与记忆凭据
+
+唯一用户名不区分大小写，3-32 位文字/数字/下划线或短横线，密码 6-16 位并确认一致；使用随机盐及 PBKDF2-HMAC-SHA256。公开注册始终普通用户，旧长密码保留至重置。提供登录、注册、游客和退出切换。
+
+恢复上次成功用户名；记住密码必须主动勾选并使用 Windows DPAPI/macOS 钥匙串，不在用户表存明文。取消勾选并成功登录清除记忆；损坏或无法解密的偏好不能阻止登录。旧访客进度保留，不通过游客错题/历史暴露，也不自动归属新账户。
+
+#### FR-11：图形维护与监管
+
+普通用户与管理员共用题库中心，支持列表、搜索、筛选、增删改、图片和预览。普通用户仅本人，管理员维护公共及全部个人题库，提供所属账户选择和用户管理直达入口。已有 ID 不变，拒绝重复及过期编辑；丢弃未保存内容及删除需确认。公共维护保留源文件和扩展字段，备份失败不得写入。个人保存/删除必须重新校验会话，账号停用后旧表单也不能继续写。
+
+#### FR-12：本地图片上传
+
+编辑器接受 PNG/GIF/PPM/PGM，限制 10 MB、1600 万像素并校验解码，复制为 `assets/uploads/` 唯一文件名；JPEG/WebP 需先转换。不移动或覆盖源图；取消或非法上传保留原字段。解除引用不自动删除可能共享的图片，可保留未引用上传。
+
+#### FR-13：示例内容
+
+保留三科 60 道单选题，各科 20 道，涵盖主题、三级难度、解析与图片示例。原始样例 ID/内容保持，扩展科目主要修改数据。
+
+#### FR-14：角色与用户管理
+
+持久化 admin/student 和 enabled 状态。已迁移 wutaicheng 保留 UUID、凭据哈希及进度，新注册同名不提权。管理员可列出、新增、改名、启停、升降级、重置密码并查看学习数据，界面不显示密码、哈希或盐。密码编辑留空保留，重置仍需长度及确认校验。
+
+保留至少一名启用管理员；服务读取当前状态，不信任缓存角色。停用用户不能登录或从旧会话写入，撤销管理员后不能继续维护公共或他人内容。本地权限不能防止直接修改文件。
+
+#### FR-15：字母选项
+
+选项使用 A/B/C/D 并可延伸 Z/AA，配分隔符或独立字母列。移除重复前缀及重复原生选择标记；不改变存储答案或判题。报告和预览保持明确标签。
+
+#### FR-16：语言与主题
+
+新配置默认英文，可切换简体中文，偏好持久化。登录、导航、配置、反馈、管理和导入诊断经词典翻译，存储角色/状态不依赖语言。题目、用户名、路径不自动翻译；深浅主题及已有偏好保留。
+
+#### FR-17：答题对战与决策记录
+
+所有角色使用已有公共题库对战，本地模拟或 API 可选，双方同题 30 秒。答对 100 分，5/10/15/20/30 秒内额外 50/40/30/20/10，答错无正确/时间分，额外分字段预留。初始血量 100/200/300/500/1000，低分方扣除分差且不低于 0；归零或题目完成结束。
+
+本地正确率 50%/72%/88%/97%，模拟时间 12-24/8-18/4-12/2-7 秒；API 等级控制检查要求和时间，不保证正确率。输出绑定题目、选项、模拟时间与简短摘要。读题、比较、选择检查是替换式活动展示，不是内部思维直播。双方结束前隐藏答案相关内容，之后显示已保存决策及独立题库解析，不事后另编理由。
+
+API 可传标记过的题干/选项图，不传答案键/解析；图必须在项目内，格式 PNG/JPEG/GIF/WebP，单图 8 MiB、总 16 MiB。官方图片请求使用 deepseek-flash，自定义服务需视觉模型；结构化输出 800 tokens。失败、非法及截止时间到达后返回的决策使该轮作废，不计分不扣血并可重试。模型可能出错；在线多人和技能卡为后续功能。
+
+#### FR-18：英文导出与时间
+
+固定报告文案、字段、PDF 属性及页脚始终英文；题目、解析、笔记保留原文。学习记录只按查询快照导出 PDF，包含点赞和完整笔记；错题支持可回导 CSV 与含图片、选项、答案、解析、次数和最近时间的 PDF，删除题目使用英文回退。
+
+CSV 使用 UTF-8 BOM 并防公式前缀；生成及记录时间统一本机时区，显示 yyyy/mm/dd hh:mm:ss，PDF 标明时区，不直出原始 ISO 串。字体回退保留中文和全角标点，支持字符不得显示黑方块。已导出的 PDF 不自动更新。
+
+#### FR-19：响应布局与输入
+
+自动适屏及 960x640/1080x720/1280x800 预设受屏幕边界限制，提供紧凑布局和持久化滚轮选项，不改变系统分辨率。成对控件标题换行仍应对齐。练习/对战主要操作固定可见，题目与反馈独立滚动，结果不挤掉下一题。切换主题保留当前答案。
+
+### 3. 非功能需求
+
+- **NFR-01 易用性：**统一导航、明确主操作/焦点、紧凑可读布局、可用滚动和清晰反馈。
+- **NFR-02 可维护性：**分离模型、持久化、服务、界面、导入、监管和导出；命名清晰，注释解释身份和数据保留规则，维护双语 README/SRS、变更及测试，使用 Ruff。兼容导出与历史备份明确配置。
+- **NFR-03 扩展性：**学科由数据扩展，题型扩展校验、判题和 UI 而非复制存储；额外对战分及将来公开发布边界明确。
+- **NFR-04 可靠性/性能：**可恢复错误保留原数据，失败/迟到请求不扣血，网络在 UI 线程外执行；缓存有上限，减少重复重绘，关闭时取消定时器，允许时局部点赞更新。
+- **NFR-05 可测试性：**临时数据测试覆盖判题、筛选、持久化、导入、备份失败、撤权、停用会话、语言、导出、时间、缓存和对战异常；自动网络测试使用模拟，真实联调单独记录。
+- **NFR-06 兼容性：**Python 3.10+、Tk、图形桌面；核心标准库，PDF 使用 ReportLab；主要测试平台 Windows，核心练习无隐藏云依赖。
+
+### 4. 交付与验收
+
+交付包括可运行程序、示例题库/图片、导入模板、账户管理、个人监管、每日计划、错题/历史、可选伴学/对战、英文报告、自动测试、双语 README/SRS、开发规范和测试/变更记录。
+
+验收应覆盖启动、公共/个人筛选、单次提交及持久化、复习正确才消错、游客/账户隔离、停用/降级后重新校验、备份及编辑冲突、导入与回导、固定按钮、双语界面保留题目原文、两阶段伴学、图片和决策绑定本题、异常及迟到轮次作废、英文报告时间/图片/笔记，以及记录限制的检查结果。
+
+### 5. 边界与历史
+
+不宣称已实现云同步、自助找回、在线多人、未完成会话恢复、自适应引擎、自动生成题库、技能卡或通用公开发布流程。原子 JSON 不是多进程锁；可有未引用图片。API 延迟、正确率及识图质量不保证；MAT009 返回 5 与三段摘要只是单题联通验证。
+
+保留原 CLI/桌面历史、迁移账户、原题库和变更记录。结合[实现对应](docs/SRS.md)、[README](README.md)、[变更](docs/CHANGELOG.md)和[测试报告](docs/TEST_REPORT.md)阅读；旧文档作为历史证据，不作为当前权限或功能规则。

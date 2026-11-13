@@ -28,6 +28,8 @@ class ImportUiTests(unittest.TestCase):
             ):
                 app.choose_import_file()
             self.assertEqual(len(app.import_preview.valid), 3)
+            for item in app.import_table.get_children():
+                self.assertEqual(app.import_table.item(item, "values")[-1], "Validation passed")
             self.assertNotIn("disabled", app.import_confirm.state())
             with (
                 patch("learning_platform.gui.messagebox.askyesno", return_value=True),
