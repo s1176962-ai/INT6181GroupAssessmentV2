@@ -85,8 +85,13 @@ def card_frame(parent, bg=None, pad=16):
     # size explicitly so the canvas spans the whole Frame, padding included.
     canvas.place(x=-inset, y=-inset, width=1, height=1)
 
+    last_size = [None]
+
     def draw(_event=None):
         w, h = frame.winfo_width(), frame.winfo_height()
+        if last_size[0] == (w, h):
+            return
+        last_size[0] = (w, h)
         canvas.place(x=-inset, y=-inset, width=max(w, 1), height=max(h, 1))
         canvas.delete("all")
         if w <= 2 or h <= 2:

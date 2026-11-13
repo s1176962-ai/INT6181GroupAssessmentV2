@@ -13,10 +13,10 @@ from .battle import (
     ROUND_SECONDS,
     ApiOpponent,
     LocalOpponent,
-    analysis_prompt,
     apply_damage,
     grade,
 )
+from .image_cache import portrait_image
 from .services import select_questions
 from .widgets import card_frame
 
@@ -45,7 +45,7 @@ class BattlePage:
         self.level_labels = {app.tr(level): level for level in PROFILES}
         self.level = tk.StringVar(value=app.tr("普通级"))
         self.count = tk.StringVar(value="5")
-        self.backend = tk.StringVar(value="Local")
+        self.backend = tk.StringVar(value="API" if app.ai_settings.load()["api_key"] else "Local")
         self.initial_hp = tk.StringVar(value="100")
         for label, variable, values in (
             ("科目", self.subject, ["All"] + sorted({q.subject for q in app.public_questions})),
@@ -59,6 +59,7 @@ class BattlePage:
                 fill="x", pady=6
             )
         app.label(app.tr("正确分 100；≤5/10/15/20/30 秒分别加 50/40/30/20/10 分。额外分暂为 0。"))
+        app.label(app.tr("API：模型根据题目选择答案并保存依据；Local：按概率模拟对手。"))
         app.button(app.tr("开始对战"), self.start, "Accent.TButton")
 
     def start(self):
@@ -76,7 +77,7 @@ class BattlePage:
             return
         self.difficulty = self.level_labels[self.level.get()]
         self.provider = (
-            ApiOpponent(self.app.ai_assistant, self.app.tr.language)
+            ApiOpponent(self.app.ai_assistant, self.app.tr.language, self.app.project_root)
             if self.backend.get() == "API"
             else LocalOpponent()
         )
@@ -96,6 +97,8 @@ class BattlePage:
         self.started = time.monotonic()
         q = self.questions[self.index]
         self.planned, self.delay = None, ROUND_SECONDS
+        self.decision = None
+        self.decision_error = None
         responses = queue.Queue()
 
         def request_opponent():
@@ -152,7 +155,8 @@ class BattlePage:
         scroll.pack(side="right", fill="y")
         self.thinking_status.configure(yscrollcommand=scroll.set)
         self.thinking_status.pack(side="left", fill="both", expand=True)
-        self.thinking_stages = [app.tr("阅读题目")]
+        self.current_stage = -1
+        self.show_decision_stage(0)
         ttk.Label(player_card, text=q.question, wraplength=T.px(420), style="Question.TLabel").pack(
             fill="x", pady=T.px(T.SPACE_3)
         )
@@ -166,6 +170,8 @@ class BattlePage:
                 variant="secondary",
             )
             button.pack(fill="x", pady=T.px(T.SPACE_1))
+            if q.option_images and q.option_images[index]:
+                app.show_image(q.option_images[index], parent=player_card, max_width=180)
             self.buttons.append(button)
         dock = app._action_dock()
         result_frame = ttk.Frame(dock)
@@ -197,9 +203,10 @@ class BattlePage:
         self.result.pack(side="left", fill="x", expand=True)
 
         def fit_result(_event=None):
-            self.result.update_idletasks()
             lines = self.result.count("1.0", "end-1c", "displaylines")
-            self.result.configure(height=min(7, max(4, (lines[0] if lines else 0) + 1)))
+            height = min(7, max(4, (lines[0] if lines else 0) + 1))
+            if int(self.result.cget("height")) != height:
+                self.result.configure(height=height)
 
         self.result.bind("<Configure>", fit_result)
         self.fit_result = fit_result
@@ -213,29 +220,26 @@ class BattlePage:
             if generation != self.generation or not self.active or not self.clock.winfo_exists():
                 return
             elapsed = time.monotonic() - self.started
-            if self.ai is None:
-                stage = "阅读题目" if elapsed < 3 else "比较选项" if elapsed < 7 else "准备作答"
-                translated = app.tr(stage)
-                if translated not in self.thinking_stages:
-                    self.thinking_stages.append(translated)
-                    self.thinking_status.configure(text="\n".join(self.thinking_stages))
             try:
                 response, error = responses.get_nowait()
-                if error:
-                    self.ai = grade(False, ROUND_SECONDS + 1)
-                    self.ai_status.configure(text=app.tr("AI 服务不可用，本题未作答"))
-                else:
-                    self.planned, self.delay = response
-                    self.delay = max(self.delay, elapsed)
+                self.receive_decision(response, error, elapsed)
             except queue.Empty:
                 pass
-            self.clock.configure(
-                text=f"{self.index + 1} / {len(self.questions)} · {max(0, ROUND_SECONDS - int(elapsed))}s"
-            )
+            if self.ai is None:
+                _, low, high = PROFILES[self.difficulty]
+                duration = self.delay if self.decision else (low + high) / 2
+                stage = min(2, int(elapsed / max(duration, 1) * 3))
+                self.show_decision_stage(stage)
+            clock_text = f"{self.index + 1} / {len(self.questions)} · {max(0, ROUND_SECONDS - int(elapsed))}s"
+            if self.clock.cget("text") != clock_text:
+                self.clock.configure(text=clock_text)
             if self.ai is None and self.planned is not None and elapsed >= self.delay:
                 self.ai = grade(self.planned == q.answer, self.delay)
                 self.ai_status.configure(text=f"{self.opponent_name}: {app.tr('已锁定答案')}")
+                self.thinking_status.configure(text=app.tr("我选好了，等你一起揭晓。"))
             if self.ai is None and elapsed >= ROUND_SECONDS:
+                if self.decision is None:
+                    self.decision_error = app.tr("等待对手决策超时。")
                 self.ai = grade(False, ROUND_SECONDS + 1)
             if self.player is None and elapsed >= ROUND_SECONDS:
                 self.answer(None, timed_out=True)
@@ -245,6 +249,19 @@ class BattlePage:
             self.timer_id = app.root.after(100, tick)
 
         tick()
+
+    def receive_decision(self, response, error, elapsed):
+        """Reject late responses before assigning an answer or scoring it."""
+        if error or elapsed >= ROUND_SECONDS:
+            self.decision = None
+            self.planned = None
+            self.decision_error = error or self.app.tr("等待对手决策超时。")
+            self.ai = grade(False, ROUND_SECONDS + 1)
+            self.ai_status.configure(text=self.app.tr("AI 服务不可用，本题未作答"))
+            return
+        self.decision = response
+        self.planned, self.delay = response
+        self.delay = max(self.delay, elapsed)
 
     def answer(self, value, timed_out=False):
         if self.player is not None:
@@ -259,6 +276,22 @@ class BattlePage:
         if not self.active:
             return
         self.active = False
+        if self.decision_error:
+            self.ai_status.configure(
+                text=self.app.tr("对手作答异常"), foreground=T.palette()["TEXT"]
+            )
+            self.show_expression("thinking")
+            self.thinking_status.configure(
+                text=self.app.tr("对手未返回有效答案，本题作废，不计分也不扣血。")
+                + "\n\n"
+                + self.app.tr("异常原因：")
+                + self.decision_error
+            )
+            self.result.configure(text=self.app.tr("本题未结算，请重试。"))
+            self.next.configure(text=self.app.tr("重试本题"), command=self.round)
+            self.next.state(["!disabled"])
+            self.fit_result()
+            return
         q = self.questions[self.index]
         letter = chr(65 + q.options.index(self.planned)) if self.planned in q.options else "—"
         self.ai_status.configure(
@@ -281,38 +314,34 @@ class BattlePage:
         record = self.app.tr(
             "本题 {0} · 我的选择：{1} · 正确答案：{2}", q.id, chosen or "—", q.answer
         )
-        process = "\n".join(self.thinking_stages)
-        explanation = process + "\n\n" + record + "\n\n" + q.explanation
+        stage_titles = ("读题", "分析选项", "选择并检查")
+        process = "\n\n".join(
+            f"{index + 1}. {self.app.tr(title)}\n{summary}"
+            for index, (title, summary) in enumerate(
+                zip(stage_titles, self.decision.stages if self.decision else ())
+            )
+        )
+        basis = (
+            self.decision.basis
+            if self.decision and self.decision.source == "api"
+            else self.app.tr("这是按等级概率产生的模拟选择，不是模型解题决策。")
+            if self.decision
+            else self.app.tr("本题没有有效决策记录。")
+        )
+        explanation = (
+            process
+            + "\n\n"
+            + record
+            + "\n\n"
+            + self.app.tr("作答时的决策依据：")
+            + "\n"
+            + basis
+            + "\n\n"
+            + self.app.tr("题库解析：")
+            + "\n"
+            + q.explanation
+        )
         self.thinking_status.configure(text=explanation)
-        if self.app.ai_settings.load()["api_key"]:
-            generation = self.generation
-            results = queue.Queue()
-
-            def analyze():
-                try:
-                    results.put(
-                        self.app.ai_assistant.ask(
-                            analysis_prompt(q, chosen), language=self.app.tr.language
-                        )
-                    )
-                except (ValueError, OSError):
-                    results.put(explanation)
-
-            def poll():
-                if generation != self.generation or not self.thinking_status.winfo_exists():
-                    return
-                try:
-                    reply = results.get_nowait()
-                    self.thinking_status.configure(
-                        text=reply
-                        if reply == explanation
-                        else process + "\n\n" + record + "\n\n" + reply
-                    )
-                except queue.Empty:
-                    self.app.root.after(100, poll)
-
-            threading.Thread(target=analyze, daemon=True).start()
-            self.app.root.after(100, poll)
         self.result.configure(
             text=f"{self.app.tr('正确答案')}：{q.answer}\n{q.explanation}\n"
             f"{self.player_name} {self.player.correct} + {self.player.time} + {self.player.extra} = {self.player.total}\n"
@@ -323,32 +352,26 @@ class BattlePage:
         if self.player_hp == 0 or self.ai_hp == 0 or self.index == len(self.questions) - 1:
             self.next.configure(text=self.app.tr("查看结果"))
 
+    def show_decision_stage(self, stage):
+        """Replace the previous activity; never expose an opponent answer early."""
+        if self.current_stage == stage:
+            return
+        self.current_stage = stage
+        messages = (
+            "先读题，看看它问的是什么……",
+            "再看看各个选项，比较它们与题意是否相符……",
+            "选一个答案，再检查有没有漏掉条件……",
+        )
+        self.thinking_status.configure(text=f"{stage + 1} / 3\n\n{self.app.tr(messages[stage])}")
+
     def show_expression(self, state):
         app = self.app
         sheet = app.project_root / "assets" / "battle" / "expressions.png"
         path = sheet if sheet.exists() else app.project_root / "AI-assistant-icon.png"
         try:
-            base = tk.PhotoImage(master=app.root, file=str(path))
-            if path == sheet:
-                width = base.width() // 3
-                index = {"thinking": 0, "correct": 1, "wrong": 2}[state]
-                cropped = tk.PhotoImage(master=app.root, width=width, height=base.height())
-                cropped.tk.call(
-                    str(cropped),
-                    "copy",
-                    str(base),
-                    "-from",
-                    index * width,
-                    0,
-                    (index + 1) * width,
-                    base.height(),
-                    "-to",
-                    0,
-                    0,
-                )
-                base = cropped
-            factor = max(1, (max(base.width(), base.height()) + T.px(190) - 1) // T.px(190))
-            self.portrait.image = base.subsample(factor)
+            self.portrait.image = portrait_image(
+                app.root, path, state, T.px(190), sheet=path == sheet
+            )
             self.portrait.configure(image=self.portrait.image)
         except (tk.TclError, OSError):
             self.portrait.configure(text="AI")

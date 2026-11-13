@@ -1,5 +1,7 @@
 # V2 当前版本说明 · 2026-10-29
 
+2026-11-13：API 对战支持附带题干及选项图，必须标明图像所属选项，不向对手发送答案键或解析。官方 DeepSeek 图片请求使用视觉模型 deepseek-flash，纯文本模型配置不变。读取失败、越出项目路径、格式或大小不合法的图片不可静默忽略。Local 模拟无视觉能力，普通伴学提问仍维持文字输入。
+
 登录页面应保存上次成功登录的用户名。只有用户主动选择“记住密码”时才使用操作系统提供的用户级安全存储保存密码；仓库和用户表不得保存该密码。取消选择并成功登录后应停止自动填写密码。损坏或无法解密的本地登录状态不得阻止正常登录。
 
 正式目录：`D:\develop\workplace\INT6181GroupAssessmentV2`。运行 `python main.py`。当前采用 V2 深色界面和配图题库；保留 V2 测试，恢复窗口尺寸设置并迁入原版账户。完整差异与需求补充见 [V2 整合说明](docs/V2_INTEGRATION.md)。以下保留原版文档历史，其中旧目录、旧布局和测试数量以本说明为准。
@@ -89,6 +91,10 @@ The system shall:
 - Support single-choice questions in the initial version.
 
 ### FR-04A: AI Study Assistant
+
+### Learning Journal Update (2026-11-13)
+
+Authenticated users may like and annotate individual session records. Annotations shall be isolated by account and persisted independently of legacy progress. Queries shall combine inclusive local-date ranges with liked and note-presence filters. On-screen timestamps and PDF timestamps shall use the same local-time conversion and `yyyy/mm/dd hh:mm:ss` formatting. Summary cards shall reflect the displayed query. Journal exports shall offer PDF only and include the displayed query snapshot and notes. Legacy sessions without individual answer details remain session-level records.
 
 The system shall provide an optional DeepSeek-compatible study assistant on the home and quiz pages. API endpoint, model and API Key shall be configurable; the Key shall be protected by the operating-system account and excluded from version control.
 
@@ -322,3 +328,10 @@ The four standard home actions shall use a two-by-two grid at normal window widt
 
 
 答题页进度条固定在顶部标题栏下方；题号只在标题栏显示一次。中间仅滚动题目、选项和解析，底部操作栏固定。离开答题页时移除固定进度区域。
+# 2026-11-13 个人题库监管补充
+
+管理员可通过题库管理的“所有个人题库”按用户检索、新增、修改和删除个人题目，也可从人员管理直接进入选中用户题库。个人题目仍不向其他普通用户公开。服务层每次访问重新核验管理员权限和所属账户，管理员撤权后禁止继续维护他人题库；写入前自动备份，用户表结构不变。人员管理统一统计卡、表格和固定操作栏样式。跨账户批量导入不在本次范围内。
+
+# 对战决策补充 · 2026-11-13
+
+API 对手应基于当前题干及选项提交结构化选项决策和简短依据，不接收答案键或图片。决策先保存，双方结束后公开，不得通过结算后的第二次生成替换原作答依据。题库解析另列。Local 必须标明概率模拟身份，不伪装成模型分析。等级不再强制模型随机答错，模拟等待时间与实际接口耗时应予以区分。

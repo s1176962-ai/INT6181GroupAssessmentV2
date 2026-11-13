@@ -44,8 +44,15 @@ def round_rect(canvas, x1, y1, x2, y2, radius, fill=None, outline=None, width=1)
             (x2 - 2 * r, y2 - 2 * r, 270),
         ):
             canvas.create_arc(
-                cx, cy, cx + 2 * r, cy + 2 * r,
-                start=start, extent=90, style="pieslice", fill=paint, outline="",
+                cx,
+                cy,
+                cx + 2 * r,
+                cy + 2 * r,
+                start=start,
+                extent=90,
+                style="pieslice",
+                fill=paint,
+                outline="",
             )
     if outline and width:
         canvas.create_line(x1 + r, y1, x2 - r, y1, fill=outline, width=width)
@@ -59,8 +66,15 @@ def round_rect(canvas, x1, y1, x2, y2, radius, fill=None, outline=None, width=1)
             (x2 - 2 * r, y2 - 2 * r, 270),
         ):
             canvas.create_arc(
-                cx, cy, cx + 2 * r, cy + 2 * r,
-                start=start, extent=90, style="arc", outline=outline, width=width,
+                cx,
+                cy,
+                cx + 2 * r,
+                cy + 2 * r,
+                start=start,
+                extent=90,
+                style="arc",
+                outline=outline,
+                width=width,
             )
 
 
@@ -137,7 +151,12 @@ class Interactive:
             return
         g = T.px(T.FOCUS_RING)
         round_rect(
-            canvas, x1 - g, y1 - g, x2 + g, y2 + g, radius + g,
+            canvas,
+            x1 - g,
+            y1 - g,
+            x2 + g,
+            y2 + g,
+            radius + g,
             fill=T.FOCUS_GLOW,
         )
 
@@ -196,9 +215,7 @@ class SoftPanel(tk.Frame):
         self.edge = edge
         self.radius = T.px(radius if radius is not None else T.RADIUS_CARD)
         self.pad = T.px(padding)
-        self.canvas = tk.Canvas(
-            self, bg=parent_bg(parent), highlightthickness=0, bd=0, takefocus=0
-        )
+        self.canvas = tk.Canvas(self, bg=parent_bg(parent), highlightthickness=0, bd=0, takefocus=0)
         self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
         self.content = tk.Frame(self, bg=self.surface)
         self.content.pack(fill="both", expand=True, padx=self.pad, pady=self.pad)
@@ -213,8 +230,14 @@ class SoftPanel(tk.Frame):
         round_rect(cv, 0, 0, w, h, self.radius, fill=self.surface)
         if self.edge:
             round_rect(
-                cv, 1, 1, w - 1, h - 1, self.radius - 1,
-                outline=self.edge, width=T.px(T.HAIRLINE),
+                cv,
+                1,
+                1,
+                w - 1,
+                h - 1,
+                self.radius - 1,
+                outline=self.edge,
+                width=T.px(T.HAIRLINE),
             )
 
     def set_edge(self, color):
@@ -233,7 +256,10 @@ class SoftPanel(tk.Frame):
 def hairline(parent, color=None):
     """A 1px hairline separator (no dark 1px border)."""
     line = tk.Canvas(
-        parent, height=T.px(T.HAIRLINE), highlightthickness=0, bd=0,
+        parent,
+        height=T.px(T.HAIRLINE),
+        highlightthickness=0,
+        bd=0,
         bg=parent_bg(parent),
     )
     line.bind(
@@ -255,8 +281,14 @@ class SoftButton(tk.Canvas, Interactive):
     def __init__(self, parent, text="", command=None, variant="primary", width=None, **kwargs):
         height = T.px(T.CONTROL_H)
         super().__init__(
-            parent, height=height, width=width or T.px(140),
-            bg=parent_bg(parent), highlightthickness=0, bd=0, takefocus=1, **kwargs,
+            parent,
+            height=height,
+            width=width or T.px(140),
+            bg=parent_bg(parent),
+            highlightthickness=0,
+            bd=0,
+            takefocus=1,
+            **kwargs,
         )
         self._text = text
         self._variant = variant
@@ -338,8 +370,14 @@ class SoftButton(tk.Canvas, Interactive):
         round_rect(cv, g, g, w - g, h - g, r, fill=fill)
         if self._variant != "primary":
             round_rect(
-                cv, g, g, w - g, h - g, r,
-                outline=T.BORDER_CONTROL, width=T.px(T.HAIRLINE),
+                cv,
+                g,
+                g,
+                w - g,
+                h - g,
+                r,
+                outline=T.BORDER_CONTROL,
+                width=T.px(T.HAIRLINE),
             )
         cv.create_text(w // 2, h // 2, text=self._text, fill=ink, font=T.TYPE_BUTTON)
 
@@ -353,9 +391,17 @@ class CircleIconButton(tk.Button, Interactive):
     def __init__(self, parent, glyph="←", command=None, size=None, **kwargs):
         self.size = T.px(size or T.CONTROL_H)
         super().__init__(
-            parent, text="", command=command, relief="flat", bd=0,
-            highlightthickness=0, bg=parent_bg(parent), activebackground=parent_bg(parent),
-            cursor="hand2", takefocus=1, **kwargs,
+            parent,
+            text="",
+            command=command,
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
+            bg=parent_bg(parent),
+            activebackground=parent_bg(parent),
+            cursor="hand2",
+            takefocus=1,
+            **kwargs,
         )
         self._glyph = glyph
         self._images = {}
@@ -387,10 +433,8 @@ class CircleIconButton(tk.Button, Interactive):
         mid = size // 2
         image.put(ink, to=(mid - 5, mid - 1, mid + 6, mid + 1))
         for step in range(6):
-            image.put(ink, to=(mid - 5 + step, mid - 1 - step,
-                              mid - 3 + step, mid + 1 - step))
-            image.put(ink, to=(mid - 5 + step, mid + step,
-                              mid - 3 + step, mid + 2 + step))
+            image.put(ink, to=(mid - 5 + step, mid - 1 - step, mid - 3 + step, mid + 1 - step))
+            image.put(ink, to=(mid - 5 + step, mid + step, mid - 3 + step, mid + 2 + step))
         return image
 
     def _face(self):
@@ -439,9 +483,7 @@ class Dropdown(tk.Frame, Interactive):
         self._values = list(values)
         self._callbacks = []
         self._trace = self._var.trace_add("write", lambda *_: self._draw())
-        self.canvas = tk.Canvas(
-            self, bg=parent_bg(parent), highlightthickness=0, bd=0, takefocus=0
-        )
+        self.canvas = tk.Canvas(self, bg=parent_bg(parent), highlightthickness=0, bd=0, takefocus=0)
         self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
         self._init_state()
         self.bind("<Configure>", lambda _e: self._draw())
@@ -462,9 +504,15 @@ class Dropdown(tk.Frame, Interactive):
         if self._disabled or not self._values:
             return
         menu = tk.Menu(
-            self, tearoff=0, bg=T.SURFACE, fg=T.TEXT,
-            activebackground=T.PRIMARY_SOFT, activeforeground=T.PRIMARY,
-            bd=0, relief="flat", font=T.TYPE_BODY,
+            self,
+            tearoff=0,
+            bg=T.SURFACE,
+            fg=T.TEXT,
+            activebackground=T.PRIMARY_SOFT,
+            activeforeground=T.PRIMARY,
+            bd=0,
+            relief="flat",
+            font=T.TYPE_BODY,
         )
         for value in self._values:
             menu.add_command(label=str(value), command=lambda v=value: self._pick(v))
@@ -504,7 +552,9 @@ class Dropdown(tk.Frame, Interactive):
     def configure(self, cnf=None, **kwargs):
         if not hasattr(self, "_values"):
             return super().configure(cnf, **kwargs)
-        values = kwargs.pop("values", (cnf or {}).pop("values", None) if isinstance(cnf, dict) else None)
+        values = kwargs.pop(
+            "values", (cnf or {}).pop("values", None) if isinstance(cnf, dict) else None
+        )
         if values is not None:
             self._values = list(values)
         result = super().configure(cnf, **kwargs) if (cnf or kwargs) else None
@@ -554,12 +604,19 @@ class Dropdown(tk.Frame, Interactive):
         r = T.px(T.RADIUS_CONTROL)
         g = T.px(T.FOCUS_RING)
         self._glow_ring(cv, g, g, w - g, h - g, r)
-        fill = T.DISABLED_FILL if self._disabled else (
-            T.PRESSED if self._pressed else T.HOVER if self._hover else T.SURFACE
+        fill = (
+            T.DISABLED_FILL
+            if self._disabled
+            else (T.PRESSED if self._pressed else T.HOVER if self._hover else T.SURFACE)
         )
         round_rect(cv, g, g, w - g, h - g, r, fill=fill)
         round_rect(
-            cv, g, g, w - g, h - g, r,
+            cv,
+            g,
+            g,
+            w - g,
+            h - g,
+            r,
             outline=T.PRIMARY if self._glow() else T.BORDER_CONTROL,
             width=T.px(2) if self._glow() else T.px(T.HAIRLINE),
         )
@@ -570,8 +627,10 @@ class Dropdown(tk.Frame, Interactive):
         cv.create_line(cx - step, cy - step // 2, cx, cy + step // 2, fill=ink, width=T.px(2))
         cv.create_line(cx, cy + step // 2, cx + step, cy - step // 2, fill=ink, width=T.px(2))
         cv.create_text(
-            g + T.px(T.SPACE_3), h / 2,
-            text=self._var.get(), anchor="w",
+            g + T.px(T.SPACE_3),
+            h / 2,
+            text=self._var.get(),
+            anchor="w",
             fill=T.DISABLED_INK if self._disabled else T.TEXT,
             font=T.TYPE_BODY_LARGE,
         )
@@ -581,13 +640,19 @@ class Dropdown(tk.Frame, Interactive):
 
 
 class Stepper(tk.Canvas, Interactive):
-    """One-piece [−] value [+] control; no native Spinbox arrows."""
+    """Rounded [−] editable integer [+] control with native text editing."""
 
     def __init__(self, parent, textvariable, maximum=20, minimum=1, **kwargs):
         self._h = T.px(T.CONTROL_H)
         super().__init__(
-            parent, height=self._h, width=T.px(160), bg=parent_bg(parent),
-            highlightthickness=0, bd=0, takefocus=1, **kwargs,
+            parent,
+            height=self._h,
+            width=T.px(160),
+            bg=parent_bg(parent),
+            highlightthickness=0,
+            bd=0,
+            takefocus=1,
+            **kwargs,
         )
         self._var = textvariable
         self._max = maximum
@@ -597,10 +662,40 @@ class Stepper(tk.Canvas, Interactive):
         self._trace = self._var.trace_add("write", lambda *_: self._draw())
         self.canvas = self
         self._init_state()
+        self.entry = tk.Entry(
+            self,
+            textvariable=self._var,
+            justify="center",
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
+            font=T.TYPE_BODY_LARGE,
+            bg=T.SURFACE,
+            fg=T.TEXT,
+            insertbackground=T.TEXT,
+            selectbackground=T.PRIMARY,
+            selectforeground=T.ON_PRIMARY,
+            validate="key",
+            validatecommand=(self.register(self._valid_text), "%P"),
+        )
+        self.entry.bind("<FocusOut>", self._commit_entry)
+        self.entry.bind("<Return>", self._commit_entry)
+        self.entry.bind("<Control-a>", self._select_all)
+        self.entry.bind("<MouseWheel>", self._on_wheel)
         self.bind("<Configure>", lambda _e: self._draw())
         self.bind("<Destroy>", self._on_destroy)
-        self.bind("<KeyRelease>", self._on_key)
         self.bind("<MouseWheel>", self._on_wheel)
+
+    @staticmethod
+    def _valid_text(value):
+        return value == "" or (value.isascii() and value.isdigit() and len(value) <= 6)
+
+    def _select_all(self, _event):
+        self.entry.selection_range(0, "end")
+        return "break"
+
+    def _commit_entry(self, _event=None):
+        self.set(max(self._min, min(self._max, self._number())))
 
     def _on_destroy(self, event):
         if event.widget is self and getattr(self, "_trace", None):
@@ -676,12 +771,19 @@ class Stepper(tk.Canvas, Interactive):
         r = T.px(T.RADIUS_CONTROL)
         g = T.px(T.FOCUS_RING)
         self._glow_ring(self, g, g, w - g, h - g, r)
-        fill = T.DISABLED_FILL if self._disabled else (
-            T.HOVER if self._hover and not self._pressed else T.SURFACE
+        fill = (
+            T.DISABLED_FILL
+            if self._disabled
+            else (T.HOVER if self._hover and not self._pressed else T.SURFACE)
         )
         round_rect(self, g, g, w - g, h - g, r, fill=fill)
         round_rect(
-            self, g, g, w - g, h - g, r,
+            self,
+            g,
+            g,
+            w - g,
+            h - g,
+            r,
             outline=T.PRIMARY if self._glow() else T.BORDER_CONTROL,
             width=T.px(2) if self._glow() else T.px(T.HAIRLINE),
         )
@@ -694,12 +796,26 @@ class Stepper(tk.Canvas, Interactive):
         for cx, zone in ((third // 2, "minus"), (w - third // 2, "plus")):
             hot = self._hover and self._zone == zone and not self._disabled
             color = active if hot else ink
-            self.create_line(cx - hit // 2, h // 2, cx + hit // 2, h // 2,
-                             fill=color, width=T.px(2))
+            self.create_line(
+                cx - hit // 2, h // 2, cx + hit // 2, h // 2, fill=color, width=T.px(2)
+            )
             if zone == "plus":
-                self.create_line(cx, h // 2 - hit // 2, cx, h // 2 + hit // 2,
-                                 fill=color, width=T.px(2))
-        self.create_text(w // 2, h // 2, text=self._var.get(), font=T.TYPE_BODY_LARGE, fill=ink)
+                self.create_line(
+                    cx, h // 2 - hit // 2, cx, h // 2 + hit // 2, fill=color, width=T.px(2)
+                )
+        if hasattr(self, "entry"):
+            self.entry.configure(
+                bg=fill,
+                fg=ink,
+                insertbackground=T.TEXT,
+                state="disabled" if self._disabled else "normal",
+            )
+            self.entry.place(
+                x=third + T.px(4),
+                y=g + T.px(5),
+                width=max(10, w - 2 * third - T.px(8)),
+                height=max(10, h - 2 * g - T.px(10)),
+            )
 
     def refresh(self):
         self._draw()
@@ -711,8 +827,14 @@ class Segmented(tk.Canvas, Interactive):
     def __init__(self, parent, values=(), labels=None, variable=None, on_change=None, **kwargs):
         self._h = T.px(T.CONTROL_H)
         super().__init__(
-            parent, height=self._h, width=T.px(320), bg=parent_bg(parent),
-            highlightthickness=0, bd=0, takefocus=1, **kwargs,
+            parent,
+            height=self._h,
+            width=T.px(320),
+            bg=parent_bg(parent),
+            highlightthickness=0,
+            bd=0,
+            takefocus=1,
+            **kwargs,
         )
         self._values = list(values)
         self._labels = list(labels) if labels else [str(v) for v in values]
@@ -791,11 +913,16 @@ class Segmented(tk.Canvas, Interactive):
                 round_rect(self, x1, y1, x2, y2, T.px(T.RADIUS_CHIP), fill=T.SEGMENT_SELECTED)
             elif self._hover and index == hover_index and not self._disabled:
                 round_rect(self, x1, y1, x2, y2, T.px(T.RADIUS_CHIP), fill=T.HOVER)
-            ink = T.DISABLED_INK if self._disabled else (
-                T.PRIMARY if selected else T.TEXT_SECONDARY
+            ink = (
+                T.DISABLED_INK if self._disabled else (T.PRIMARY if selected else T.TEXT_SECONDARY)
             )
-            self.create_text((x1 + x2) / 2, h / 2, text=label,
-                             font=T.TYPE_BODY if selected else T.TYPE_CAPTION, fill=ink)
+            self.create_text(
+                (x1 + x2) / 2,
+                h / 2,
+                text=label,
+                font=T.TYPE_BODY if selected else T.TYPE_CAPTION,
+                fill=ink,
+            )
 
     def refresh(self):
         self._draw()
@@ -808,8 +935,14 @@ class Toggle(tk.Canvas, Interactive):
         self._width_px = T.px(44)
         self._height_px = T.px(24)
         super().__init__(
-            parent, width=self._width_px, height=self._height_px, bg=parent_bg(parent),
-            highlightthickness=0, bd=0, takefocus=1, **kwargs,
+            parent,
+            width=self._width_px,
+            height=self._height_px,
+            bg=parent_bg(parent),
+            highlightthickness=0,
+            bd=0,
+            takefocus=1,
+            **kwargs,
         )
         self._value = bool(value)
         self.canvas = self
@@ -849,8 +982,10 @@ class Toggle(tk.Canvas, Interactive):
         w, h, g = self._width_px, self._height_px, T.px(T.FOCUS_RING)
         r = h // 2
         self._glow_ring(self, g, g, w - g, h - g, r)
-        track = T.DISABLED_FILL if self._disabled else (
-            T.PRIMARY_HOVER if (self._hover or self._pressed) else T.PRIMARY
+        track = (
+            T.DISABLED_FILL
+            if self._disabled
+            else (T.PRIMARY_HOVER if (self._hover or self._pressed) else T.PRIMARY)
         )
         if not self._value:
             track = T.DISABLED_FILL if self._disabled else T.BORDER_CONTROL
@@ -858,8 +993,15 @@ class Toggle(tk.Canvas, Interactive):
         knob_r = r - T.px(4)
         cx = (w - g - knob_r - T.px(2)) if self._value else (g + knob_r + T.px(2))
         cy = h / 2
-        self.create_oval(cx - knob_r, cy - knob_r, cx + knob_r, cy + knob_r,
-                         fill=T.SURFACE, outline=T.BORDER_LIGHT, width=T.px(T.HAIRLINE))
+        self.create_oval(
+            cx - knob_r,
+            cy - knob_r,
+            cx + knob_r,
+            cy + knob_r,
+            fill=T.SURFACE,
+            outline=T.BORDER_LIGHT,
+            width=T.px(T.HAIRLINE),
+        )
 
     def refresh(self):
         self._draw()
@@ -877,32 +1019,114 @@ def nav_glyph(canvas, x, y, key, color, size):
     line = max(1, T.px(1))
     if key == "home":
         canvas.create_polygon(left, y, mid, top, right, y, fill="", outline=color, width=line)
-        canvas.create_rectangle(left + s * 0.18, y, right - s * 0.18, bottom,
-                                fill="", outline=color, width=line)
+        canvas.create_rectangle(
+            left + s * 0.18, y, right - s * 0.18, bottom, fill="", outline=color, width=line
+        )
     elif key == "practice":
-        canvas.create_polygon(left + s * 0.2, top, right - s * 0.1, y,
-                              left + s * 0.2, bottom, fill="", outline=color, width=line)
-    elif key in ("notebook", "questions"):
-        canvas.create_rectangle(left + s * 0.15, top, right - s * 0.15, bottom,
-                                fill="", outline=color, width=line)
+        canvas.create_polygon(
+            left + s * 0.2,
+            top,
+            right - s * 0.1,
+            y,
+            left + s * 0.2,
+            bottom,
+            fill="",
+            outline=color,
+            width=line,
+        )
+    elif key == "battle":
+        canvas.create_text(mid, y, text="VS", fill=color, font=T.TYPE_CAPTION)
+    elif key == "questions":
+        for index in range(3):
+            bx = left + s * (0.12 + index * 0.27)
+            canvas.create_rectangle(
+                bx,
+                top + s * 0.1,
+                bx + s * 0.19,
+                bottom - s * 0.14,
+                fill="",
+                outline=color,
+                width=line,
+            )
+            canvas.create_line(
+                bx, top + s * 0.3, bx + s * 0.19, top + s * 0.3, fill=color, width=line
+            )
+        canvas.create_line(left, bottom, right, bottom, fill=color, width=line)
+    elif key == "notebook":
+        canvas.create_rectangle(
+            left + s * 0.15, top, right - s * 0.15, bottom, fill="", outline=color, width=line
+        )
         for offset in (0.35, 0.55, 0.75):
-            canvas.create_line(left + s * 0.3, top + s * offset,
-                               right - s * 0.3, top + s * offset, fill=color, width=line)
+            canvas.create_line(
+                left + s * 0.3,
+                top + s * offset,
+                right - s * 0.3,
+                top + s * offset,
+                fill=color,
+                width=line,
+            )
     elif key == "history":
         for index, height in enumerate((0.4, 0.7, 1.0)):
             bx = left + s * (0.12 + index * 0.3)
-            canvas.create_line(bx, bottom, bx, bottom - s * height,
-                               fill=color, width=T.px(2))
+            canvas.create_line(bx, bottom, bx, bottom - s * height, fill=color, width=T.px(2))
     elif key == "settings":
-        canvas.create_oval(mid - s * 0.3, y - s * 0.3, mid + s * 0.3, y + s * 0.3,
-                           fill="", outline=color, width=line)
-        canvas.create_oval(mid - s * 0.08, y - s * 0.08, mid + s * 0.08, y + s * 0.08,
-                           fill="", outline=color, width=line)
+        for dx, dy in (
+            (0, -1),
+            (1, 0),
+            (0, 1),
+            (-1, 0),
+            (0.7, 0.7),
+            (-0.7, 0.7),
+            (0.7, -0.7),
+            (-0.7, -0.7),
+        ):
+            canvas.create_line(
+                mid + dx * s * 0.28,
+                y + dy * s * 0.28,
+                mid + dx * s * 0.46,
+                y + dy * s * 0.46,
+                fill=color,
+                width=max(2, line),
+            )
+        canvas.create_oval(
+            mid - s * 0.3,
+            y - s * 0.3,
+            mid + s * 0.3,
+            y + s * 0.3,
+            fill="",
+            outline=color,
+            width=line,
+        )
+        canvas.create_oval(
+            mid - s * 0.08,
+            y - s * 0.08,
+            mid + s * 0.08,
+            y + s * 0.08,
+            fill="",
+            outline=color,
+            width=line,
+        )
     else:  # users
-        canvas.create_oval(mid - s * 0.18, top + s * 0.05, mid + s * 0.18, y + s * 0.1,
-                           fill="", outline=color, width=line)
-        canvas.create_arc(left + s * 0.1, y, right - s * 0.1, bottom + s * 0.1,
-                          start=0, extent=180, style="arc", outline=color, width=line)
+        canvas.create_oval(
+            mid - s * 0.18,
+            top + s * 0.05,
+            mid + s * 0.18,
+            y + s * 0.1,
+            fill="",
+            outline=color,
+            width=line,
+        )
+        canvas.create_arc(
+            left + s * 0.1,
+            y,
+            right - s * 0.1,
+            bottom + s * 0.1,
+            start=0,
+            extent=180,
+            style="arc",
+            outline=color,
+            width=line,
+        )
 
 
 class NavItem(tk.Frame, Interactive):
@@ -918,7 +1142,11 @@ class NavItem(tk.Frame, Interactive):
         self.canvas = tk.Canvas(self, bg=T.NAV_BG, highlightthickness=0, bd=0, takefocus=0)
         self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
         self._label = tk.Label(
-            self, text=text, bg=T.NAV_BG, fg=T.TEXT, font=T.TYPE_BODY_LARGE,
+            self,
+            text=text,
+            bg=T.NAV_BG,
+            fg=T.TEXT,
+            font=T.TYPE_BODY_LARGE,
             anchor="w",
         )
         # Place the label to the right of the 16px glyph so it cannot cover the
@@ -971,12 +1199,12 @@ class NavItem(tk.Frame, Interactive):
         round_rect(cv, g, g, w - g, h - g, r, fill=fill)
         if self._selected:
             bar = T.px(T.NAV_INDICATOR)
-            round_rect(cv, g, g + T.px(8), g + bar, h - g - T.px(8), bar // 2,
-                       fill=T.PRIMARY)
+            round_rect(cv, g, g + T.px(8), g + bar, h - g - T.px(8), bar // 2, fill=T.PRIMARY)
         nav_glyph(cv, g + T.px(12), h / 2, self._icon, ink, T.px(T.ICON))
         self._label.configure(bg=fill, fg=ink)
         self._label.place(
-            x=g + T.px(36), y=g,
+            x=g + T.px(36),
+            y=g,
             width=max(w - 2 * g - T.px(36) - T.px(T.RADIUS_CHIP), 1),
             height=max(h - 2 * g, 1),
         )
@@ -997,11 +1225,20 @@ class SubjectCard(tk.Frame, Interactive):
         self.canvas = tk.Canvas(self, bg=T.SURFACE, highlightthickness=0, bd=0, takefocus=0)
         self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
         self._name_label = tk.Label(
-            self, text=name, bg=T.SURFACE, fg=T.TEXT, font=T.TYPE_HEADING, anchor="w",
+            self,
+            text=name,
+            bg=T.SURFACE,
+            fg=T.TEXT,
+            font=T.TYPE_HEADING,
+            anchor="w",
         )
         self._count_label = tk.Label(
-            self, text=count_text, bg=T.SURFACE, fg=T.TEXT_SECONDARY,
-            font=T.TYPE_CAPTION, anchor="w",
+            self,
+            text=count_text,
+            bg=T.SURFACE,
+            fg=T.TEXT_SECONDARY,
+            font=T.TYPE_CAPTION,
+            anchor="w",
         )
         self._name_label.pack(anchor="w", padx=T.px(T.SPACE_4), pady=(T.px(T.SPACE_4), 0))
         self._count_label.pack(anchor="w", padx=T.px(T.SPACE_4), pady=(T.px(T.SPACE_1), 0))
@@ -1042,18 +1279,37 @@ class SubjectCard(tk.Frame, Interactive):
         fill, edge = self._face()
         round_rect(cv, g, g, w - g, h - g, r, fill=fill)
         round_rect(
-            cv, g, g, w - g, h - g, r, outline=edge,
+            cv,
+            g,
+            g,
+            w - g,
+            h - g,
+            r,
+            outline=edge,
             width=T.px(2) if self._selected else T.px(T.HAIRLINE),
         )
         if self._selected:
             dot = T.px(14)
             cx, cy = w - g - dot - T.px(T.SPACE_3), g + dot + T.px(T.SPACE_2)
-            cv.create_oval(cx - dot // 2, cy - dot // 2, cx + dot // 2, cy + dot // 2,
-                           fill=T.PRIMARY, outline="")
-            cv.create_line(cx - T.px(3), cy, cx - T.px(1), cy + T.px(2),
-                           fill=T.ON_PRIMARY, width=T.px(2))
-            cv.create_line(cx - T.px(1), cy + T.px(2), cx + T.px(3), cy - T.px(2),
-                           fill=T.ON_PRIMARY, width=T.px(2))
+            cv.create_oval(
+                cx - dot // 2,
+                cy - dot // 2,
+                cx + dot // 2,
+                cy + dot // 2,
+                fill=T.PRIMARY,
+                outline="",
+            )
+            cv.create_line(
+                cx - T.px(3), cy, cx - T.px(1), cy + T.px(2), fill=T.ON_PRIMARY, width=T.px(2)
+            )
+            cv.create_line(
+                cx - T.px(1),
+                cy + T.px(2),
+                cx + T.px(3),
+                cy - T.px(2),
+                fill=T.ON_PRIMARY,
+                width=T.px(2),
+            )
         self._name_label.configure(bg=fill, fg=T.PRIMARY if self._selected else T.TEXT)
         self._count_label.configure(bg=fill, fg=T.TEXT_SECONDARY)
         cv.configure(bg=fill)
@@ -1065,12 +1321,21 @@ class SubjectCard(tk.Frame, Interactive):
 def labelled_field(parent, text, control, caption=None):
     """Label -> 8px gap -> control, with an optional caption underneath."""
     box = tk.Frame(parent, bg=T.SURFACE)
-    tk.Label(box, text=text, bg=T.SURFACE, fg=T.TEXT, font=T.TYPE_HEADING,
-             anchor="w").pack(fill="x")
+    tk.Label(box, text=text, bg=T.SURFACE, fg=T.TEXT, font=T.TYPE_HEADING, anchor="w").pack(
+        fill="x"
+    )
     control.pack(fill="x", pady=(T.px(T.FIELD_GAP), 0))
     if caption:
-        tk.Label(box, text=caption, bg=T.SURFACE, fg=T.TEXT_MUTED,
-                 font=T.TYPE_CAPTION, anchor="w", wraplength=T.px(420)).pack(
-            fill="x", pady=(T.px(T.SPACE_1), 0),
+        tk.Label(
+            box,
+            text=caption,
+            bg=T.SURFACE,
+            fg=T.TEXT_MUTED,
+            font=T.TYPE_CAPTION,
+            anchor="w",
+            wraplength=T.px(420),
+        ).pack(
+            fill="x",
+            pady=(T.px(T.SPACE_1), 0),
         )
     return box

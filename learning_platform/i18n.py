@@ -60,12 +60,26 @@ class Translator:
 
     def __call__(self, text: str, *values) -> str:
         template = self.english.get(text, text) if self.language == "en" else text
+        if text == "Quiz App":
+            template = "WhaleMate" if self.language == "en" else "鲸伴"
+        if text == "每题可询问一次":
+            template = (
+                "Two steps: hint, then explanation"
+                if self.language == "en"
+                else "先提示，再讲解 · 每题两次"
+            )
         if self.language == "en":
-            template = template.replace("Ask AI", "Big Whale").replace("AI hint", "Big Whale's hint")
-            template = template.replace("AI: thinking", "Big Whale: thinking").replace("AI: answer locked", "Big Whale: answer locked")
+            template = template.replace("Ask AI", "Big Whale").replace(
+                "AI hint", "Big Whale's hint"
+            )
+            template = template.replace("AI: thinking", "Big Whale: thinking").replace(
+                "AI: answer locked", "Big Whale: answer locked"
+            )
         else:
             template = template.replace("问问 AI", "大肥鱼").replace("AI 提示", "大肥鱼的提示")
-            template = template.replace("AI：思考中", "大肥鱼：思考中").replace("AI：已锁定答案", "大肥鱼：已锁定答案")
+            template = template.replace("AI：思考中", "大肥鱼：思考中").replace(
+                "AI：已锁定答案", "大肥鱼：已锁定答案"
+            )
         if self.language == "en" and template == text and not values:
             # Translate known diagnostic prefixes while leaving paths and user data intact.
             for source, target in self.english.items():

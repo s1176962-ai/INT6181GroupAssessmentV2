@@ -6,22 +6,24 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from uuid import uuid4
 
-from .maintenance import QuestionEditor, import_image
-from .models import Question, option_label
 from . import modern
 from . import ui_tokens as T
+from .bank_access import ManagedPersonalBank
+from .maintenance import QuestionEditor, import_image
+from .models import Question, option_label
 from .ui_tokens import FONT
 
 
 class EditorPage:
     """Use the application's scrollable content area without a second UI toolkit."""
 
-    def __init__(self, app, mode=None):
+    def __init__(self, app, mode=None, owner_id=None):
         self.app = app
         self.tr = app.tr
         self.mode = mode or ("public" if app.user and app.user["role"] == "admin" else "personal")
         self.repository = None
         self.editing = False
+        self.owner_id = owner_id
 
     def show_list(self):
         if not self.app.user or not self.app.check_session():
@@ -30,13 +32,28 @@ class EditorPage:
             self.mode = "personal"
         self.editing = False
         app = self.app
+        if self.mode == "managed":
+            try:
+                self.owners = app.auth.list_users(app.user)
+            except ValueError as exc:
+                app.access_error(exc)
+                return
+            if self.owner_id is None:
+                self.owner_id = self.owners[0]["id"]
         app.load_bank()
         self.questions = app.public_questions if self.mode == "public" else app.personal_questions
         self.repository = (
             QuestionEditor(app.bank.folder, lambda: app.auth.require_admin(app.user))
             if self.mode == "public"
-            else app.personal_bank
+            else ManagedPersonalBank(app.auth, lambda: app.user, app.user["id"])
         )
+        if self.mode == "managed":
+            self.repository = ManagedPersonalBank(app.auth, lambda: app.user, self.owner_id)
+            try:
+                self.questions = self.repository.all()
+            except ValueError as exc:
+                app.access_error(exc)
+                return
         app._nav_key = "questions"
         app.clear(self.tr("题库中心"), show_heading=False, back=app.home)
         heading = tk.Frame(app.body, bg=T.BG)
@@ -51,38 +68,66 @@ class EditorPage:
         switcher = ttk.Frame(heading)
         switcher.pack(side="right")
         if app.user["role"] == "admin":
-            ttk.Button(
+            modern.SoftButton(
+                switcher,
+                text=self.tr("所有个人题库"),
+                command=lambda: self.switch_mode("managed"),
+                variant="primary" if self.mode == "managed" else "secondary",
+                width=T.px(160),
+            ).pack(side="left", padx=3)
+            modern.SoftButton(
                 switcher,
                 text=self.tr("公共题库"),
                 command=lambda: self.switch_mode("public"),
-                style="Accent.TButton" if self.mode == "public" else "Tool.TButton",
+                variant="primary" if self.mode == "public" else "secondary",
+                width=T.px(145),
             ).pack(side="left", padx=3)
-        ttk.Button(
+        modern.SoftButton(
             switcher,
             text=self.tr("个人题库"),
             command=lambda: self.switch_mode("personal"),
-            style="Accent.TButton" if self.mode == "personal" else "Tool.TButton",
+            variant="primary" if self.mode == "personal" else "secondary",
+            width=T.px(145),
         ).pack(side="left", padx=3)
         description = (
             "公共题库对所有人可见，仅管理员可以维护。"
             if self.mode == "public"
             else "个人题库仅当前账户可见，可以新增、编辑、删除或批量导入。"
         )
+        if self.mode == "managed":
+            description = "管理员可按账户检查、编辑和删除个人题目；修改前自动备份。"
         app.label(self.tr(description), "Muted.TLabel")
+        if self.mode == "managed":
+            self.owner = tk.StringVar(
+                value=next(u["name"] for u in self.owners if u["id"] == self.owner_id)
+            )
+            owner_row = ttk.Frame(app.body)
+            owner_row.pack(fill="x", pady=8)
+            ttk.Label(owner_row, text=self.tr("题库所属账户")).pack(side="left", padx=(0, 12))
+            chooser = ttk.Combobox(
+                owner_row,
+                textvariable=self.owner,
+                state="readonly",
+                values=[u["name"] for u in self.owners],
+            )
+            chooser.pack(side="left", fill="x", expand=True)
+            chooser.bind("<<ComboboxSelected>>", self.select_owner)
         bar = ttk.Frame(app.body)
         bar.pack(fill="x", pady=8)
         self.search = tk.StringVar()
         self.subject = tk.StringVar(value=self.tr("全部"))
-        ttk.Entry(bar, textvariable=self.search, width=28).pack(side="left", padx=4)
+        search_entry = ttk.Entry(bar, textvariable=self.search, width=28)
+        search_entry.pack(side="left", padx=4)
+        search_entry.bind("<Return>", lambda _event: self.refresh_list())
         modern.Dropdown(
             bar,
             textvariable=self.subject,
             values=[self.tr("全部")] + sorted({q.subject for q in self.questions}),
             width=T.px(180),
         ).pack(side="left", padx=T.px(T.SPACE_1))
-        ttk.Button(bar, text=self.tr("搜索 / 筛选"), command=self.refresh_list).pack(
-            side="left", padx=4
-        )
+        modern.SoftButton(
+            bar, text=self.tr("搜索 / 筛选"), command=self.refresh_list, width=T.px(150)
+        ).pack(side="left", padx=4)
         table_frame = ttk.Frame(app.body)
         table_frame.pack(fill="both", expand=True)
         table_frame.columnconfigure(0, weight=1)
@@ -93,7 +138,7 @@ class EditorPage:
             table_frame,
             columns=("id", "subject", "topic", "difficulty", "text"),
             show="headings",
-            height=18,
+            height=10,
             selectmode="browse",
         )
         for column, title, width in [
@@ -117,15 +162,15 @@ class EditorPage:
         scroll.grid(row=0, column=1, sticky="ns")
         horizontal.grid(row=1, column=0, sticky="ew")
         self.table.bind("<Double-1>", lambda event: self.edit_selected())
+        self.table.tag_configure("alternate", background=T.HOVER)
         self.summary = app.label("")
-        actions = ttk.Frame(app.body)
-        actions.pack(fill="x", pady=8)
+        actions = app._action_dock()
         action_data = [
             (self.tr("新增题目"), self.edit),
             (self.tr("编辑选中题目"), self.edit_selected),
             (self.tr("删除选中题目"), self.delete_selected),
         ]
-        if self.mode == "personal" or app.user["role"] == "admin":
+        if self.mode in {"public", "personal"}:
             action_data.append(
                 (
                     self.tr("批量导入 JSON / CSV"),
@@ -133,14 +178,23 @@ class EditorPage:
                 )
             )
         for title, callback in action_data:
-            ttk.Button(actions, text=title, command=callback).pack(side="left", padx=4)
-        ttk.Button(actions, text=self.tr("返回首页"), command=app.home).pack(side="right", padx=4)
+            modern.SoftButton(
+                actions,
+                text=title,
+                command=callback,
+                variant="primary" if title == self.tr("新增题目") else "secondary",
+                width=T.px(175),
+            ).pack(side="left", padx=4)
         if self.mode == "public" and app.bank.warnings:
             app.label(self.tr("题库诊断：\n") + "\n".join(app.bank.warnings))
         self.refresh_list()
 
     def switch_mode(self, mode):
         self.mode = mode
+        self.show_list()
+
+    def select_owner(self, _event=None):
+        self.owner_id = next(u["id"] for u in self.owners if u["name"] == self.owner.get())
         self.show_list()
 
     def refresh_list(self):
@@ -150,11 +204,15 @@ class EditorPage:
             q
             for q in self.questions
             if (self.subject.get() == self.tr("全部") or q.subject == self.subject.get())
-            and term in f"{q.id} {q.question} {q.topic}".casefold()
+            and term in f"{q.id} {q.subject} {q.question} {q.topic}".casefold()
         ]
-        for q in matches:
+        for index, q in enumerate(matches):
             self.table.insert(
-                "", "end", iid=q.id, values=(q.id, q.subject, q.topic, q.difficulty, q.question)
+                "",
+                "end",
+                iid=q.id,
+                values=(q.id, q.subject, q.topic, q.difficulty, q.question),
+                tags=("alternate",) if index % 2 else (),
             )
         self.summary.configure(
             text=self.tr("显示 {0} / {1} 道题", len(matches), len(self.questions))
@@ -233,9 +291,7 @@ class EditorPage:
             var = tk.StringVar(value=data[key])
             self.fields[key] = var
             choices = sorted({getattr(q, key) for q in self.questions}) if key != "id" else []
-            entry = modern.Dropdown(
-                app.body, textvariable=var, values=choices, width=T.px(320)
-            )
+            entry = modern.Dropdown(app.body, textvariable=var, values=choices, width=T.px(320))
             if key == "id" and question:
                 entry.state(["disabled"])
             entry.pack(anchor="w", pady=(T.px(T.FIELD_GAP), 0))
@@ -418,7 +474,7 @@ class EditorPage:
     def save(self):
         try:
             question = self.build_question()
-            if self.mode == "personal":
+            if self.mode in {"personal", "managed"}:
                 self.repository.save(
                     question,
                     self.original,
@@ -438,4 +494,8 @@ class EditorPage:
     def authorized(self):
         if not self.app.user:
             return False
-        return self.app.check_admin() if self.mode == "public" else self.app.check_session()
+        return (
+            self.app.check_admin()
+            if self.mode in {"public", "managed"}
+            else self.app.check_session()
+        )

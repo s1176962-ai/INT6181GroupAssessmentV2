@@ -3,7 +3,9 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+from . import modern
 from . import ui_tokens as T
+from .editor_ui import EditorPage
 
 
 class UserPage:
@@ -24,10 +26,37 @@ class UserPage:
         app.label(
             self.tr("管理员可查看学习数据、修改账号、重置密码、停用登录或调整角色。密码不会显示。")
         )
+        stats = ttk.Frame(app.body)
+        stats.pack(fill="x", pady=(8, 16))
+        for index, (title, value) in enumerate(
+            [
+                ("账户总数", len(users)),
+                ("管理员", sum(u["role"] == "admin" for u in users)),
+                ("启用", sum(u["enabled"] for u in users)),
+                ("停用", sum(not u["enabled"] for u in users)),
+            ]
+        ):
+            stats.columnconfigure(index, weight=1, uniform="stats")
+            panel = modern.SoftPanel(stats, fill=T.SURFACE, padding=16)
+            panel.grid(row=0, column=index, sticky="nsew", padx=(0, 8))
+            tk.Label(
+                panel.content,
+                text=str(value),
+                bg=T.SURFACE,
+                fg=T.PRIMARY,
+                font=(T.FONT, 26, "bold"),
+            ).pack(anchor="w")
+            tk.Label(
+                panel.content, text=self.tr(title), bg=T.SURFACE, fg=T.MUTED, font=T.TYPE_CAPTION
+            ).pack(anchor="w")
         frame = ttk.Frame(app.body)
         frame.pack(fill="both", expand=True)
         self.table = ttk.Treeview(
-            frame, columns=("name", "role", "status"), show="headings", height=18
+            frame,
+            columns=("name", "role", "status"),
+            show="headings",
+            height=10,
+            selectmode="browse",
         )
         for key, title, width in [
             ("name", self.tr("用户名"), 220),
@@ -41,28 +70,41 @@ class UserPage:
         scroll.pack(side="right", fill="y")
         self.table.pack(fill="both", expand=True)
         self.users = {user["id"]: user for user in users}
-        for user in users:
+        self.table.tag_configure("alternate", background=T.HOVER)
+        self.table.bind("<Double-1>", lambda _event: self.edit_selected())
+        for index, user in enumerate(users):
             self.table.insert(
                 "",
                 "end",
                 iid=user["id"],
+                tags=("alternate",) if index % 2 else (),
                 values=(
                     user["name"],
                     self.tr("管理员") if user["role"] == "admin" else self.tr("普通用户"),
                     self.tr("启用") if user["enabled"] else self.tr("停用"),
                 ),
             )
-        actions = ttk.Frame(app.body)
-        actions.pack(fill="x", pady=(12, 0))
+        actions = app._action_dock()
         for title, command, style in (
             (self.tr("新增账户"), self.edit, "Accent.TButton"),
-            (self.tr("修改选中账户 / 重置密码"), self.edit_selected, "Tool.TButton"),
-            (self.tr("查看选中账户学习数据"), self.details, "Tool.TButton"),
+            (self.tr("编辑账户"), self.edit_selected, "Tool.TButton"),
+            (self.tr("学习数据"), self.details, "Tool.TButton"),
+            (self.tr("管理个人题库"), self.personal_bank, "Tool.TButton"),
             (self.tr("刷新列表"), self.show_list, "Tool.TButton"),
         ):
-            ttk.Button(actions, text=title, command=command, style=style).pack(
-                side="left", padx=(0, 8)
-            )
+            modern.SoftButton(
+                actions,
+                text=title,
+                command=command,
+                variant="primary" if style == "Accent.TButton" else "secondary",
+                width=T.px(150),
+            ).pack(side="left", padx=(0, 8))
+
+    def personal_bank(self):
+        user = self.selected()
+        if user and self.app.check_admin():
+            self.app.editor = EditorPage(self.app, mode="managed", owner_id=user["id"])
+            self.app.editor.show_list()
 
     def selected(self):
         selection = self.table.selection()

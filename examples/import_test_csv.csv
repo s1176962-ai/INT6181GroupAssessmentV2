@@ -1,0 +1,4 @@
+id,subject,topic,difficulty,type,question,options,answer,explanation,question_image,option_images
+DEMO-C-001,Import Lab,CSV basics,easy,single_choice,What separates fields in a standard CSV file?,"[""Comma"", ""Slash"", ""Colon""]",Comma,CSV stands for comma-separated values.,,
+DEMO-C-002,Import Lab,Validation,easy,single_choice,Which action should happen before saving imported questions?,"[""Validate and preview"", ""Delete all existing questions"", ""Skip validation""]",Validate and preview,Validation catches format errors before data is saved.,,
+DEMO-C-003,Import Lab,Private banks,medium,single_choice,Who can normally see an account's personal question bank?,"[""The account owner"", ""Every guest"", ""Every other student""]",The account owner,Personal questions are stored under the account UUID.,,

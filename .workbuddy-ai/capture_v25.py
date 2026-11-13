@@ -27,7 +27,8 @@ except Exception:
 
 from PIL import ImageGrab
 
-from learning_platform import tokens, ui_tokens as T
+from learning_platform import tokens
+from learning_platform import ui_tokens as T
 from learning_platform.auth import AuthService
 from learning_platform.gui import Application
 

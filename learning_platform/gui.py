@@ -15,6 +15,7 @@ from .auth import AuthService
 from .display import DisplaySettings, window_size
 from .editor_ui import EditorPage
 from .i18n import Translator
+from .image_cache import portrait_image, source_image
 from .importing import QuestionImportService
 from .login_preferences import LoginPreferences
 from .maintenance import QuestionEditor
@@ -206,6 +207,14 @@ class Application:
                 pass
             self._login_after = None
         self.motion.cancel()
+
+        # Cancel Tcl timers before Tk deletes their registered Python commands.
+        # This also covers login decoration, worker polling and battle timers.
+        try:
+            for job in self.root.tk.call("after", "info"):
+                self.root.after_cancel(job)
+        except tk.TclError:
+            pass
 
     def theme_labels(self):
         """Return (current label, other label, other theme key)."""
@@ -813,7 +822,7 @@ class Application:
         self.nav.pack_propagate(False)
         tk.Label(
             self.nav,
-            text="Quiz App",
+            text=self.tr("鲸伴"),
             bg=T.NAV_BG,
             fg=T.TEXT,
             font=T.TYPE_HEADING,
@@ -822,15 +831,17 @@ class Application:
         items = [
             ("home", "home", "首页", self.home),
             ("practice", "practice", "开始练习", self.configure),
-            ("battle", "practice", "答题对战", self.battle_page),
             ("notebook", "notebook", "错题本与复习", self.notebook),
+            ("battle", "battle", "答题对战", self.battle_page),
             ("history", "history", "学习统计与历史", self.history),
             ("settings", "settings", "设置 / 语言", self.settings),
         ]
         if self.user:
-            items.insert(2, ("questions", "questions", "题库管理", self.manage_questions))
+            items.insert(-1, ("questions", "questions", "题库管理", self.manage_questions))
             if self.user["role"] == "admin":
-                items.insert(3, ("users", "users", "用户管理", self.manage_users))
+                items.insert(-1, ("users", "users", "用户管理", self.manage_users))
+        else:
+            items = [item for item in items if item[0] not in {"notebook", "history"}]
         for key, glyph, caption, command in items:
             button = modern.NavItem(
                 self.nav,
@@ -915,6 +926,8 @@ class Application:
 
     def _paint_nav(self):
         expected = {"home", "practice", "battle", "notebook", "history", "settings"}
+        if not self.user:
+            expected -= {"notebook", "history"}
         if self.user:
             expected.add("questions")
             if self.user["role"] == "admin":
@@ -986,8 +999,10 @@ class Application:
             T.px(T.CONTENT_MAX),
             max(width - T.px(T.PAGE_PAD) * 2, T.px(T.CONTENT_MIN)),
         )
-        self.canvas.coords(self.window, width // 2, 0)
-        self.canvas.itemconfigure(self.window, width=content_w)
+        if self.canvas.coords(self.window) != [float(width // 2), 0.0]:
+            self.canvas.coords(self.window, width // 2, 0)
+        if int(float(self.canvas.itemcget(self.window, "width"))) != content_w:
+            self.canvas.itemconfigure(self.window, width=content_w)
         self._sync_body_height()
         self._sync_scroll()
 
@@ -1013,6 +1028,7 @@ class Application:
         self._sync_body_height()
         try:
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            self._sync_scroll()
         except tk.TclError:
             pass
 
@@ -1021,11 +1037,10 @@ class Application:
             return
         if not self.canvas.winfo_ismapped():
             return
-        self.root.update_idletasks()
         needed = self.body.winfo_reqheight() > self.canvas.winfo_height() + 4
         mapped = self.scrollbar.winfo_ismapped()
         if needed and not mapped:
-            self.scrollbar.pack(side="right", fill="y")
+            self.scrollbar.pack(side="right", fill="y", before=self.canvas)
         elif not needed and mapped:
             self.scrollbar.pack_forget()
             self.canvas.yview_moveto(0)
@@ -1318,12 +1333,10 @@ class Application:
         )
         brand_inner = tk.Frame(self.brand, bg=T.SKY)
         brand_inner.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.9)
-        ttk.Label(brand_inner, text="QUIZ STUDIO", style="BrandMark.TLabel").pack(
+        ttk.Label(brand_inner, text=self.tr("鲸伴"), style="BrandMark.TLabel").pack(
             anchor="center", pady=(0, T.px(T.SPACE_4))
         )
-        headline = self.tr(
-            "每天一点练习，看见自己的进步。\n英语 · 数学 · 科学 | 本地保存 · 离线使用"
-        )
+        headline = self.tr("答题 · 自由配置 · AI 伴学\n你的学习节奏，由你定义。")
         lead, subline = headline.split("\n", 1)
         title = ttk.Label(
             brand_inner,
@@ -1352,10 +1365,10 @@ class Application:
         counts = {}
         for question in self.questions:
             counts[question.subject] = counts.get(question.subject, 0) + 1
-        tk.Label(
+        brand_summary = tk.Label(
             brand_inner,
             text=self.tr(
-                "离线学习 · 即时反馈 · 错题复习\n已加载 {0} 道题，{1} 个学科。",
+                "与大肥鱼一起学，一起成长。\n自由题库 · 伴学提示 · 答题对战\n{0} 道题 · {1} 个学科",
                 sum(counts.values()),
                 len(counts),
             ),
@@ -1365,7 +1378,13 @@ class Application:
             wraplength=T.px(560),
             justify="center",
             anchor="center",
-        ).pack(anchor="center", pady=(T.px(T.SPACE_5), 0))
+        )
+        brand_summary.pack(fill="x", pady=(T.px(T.SPACE_3), 0))
+        brand_inner.bind(
+            "<Configure>",
+            lambda event: brand_summary.configure(wraplength=max(80, event.width - T.px(24))),
+            add="+",
+        )
         self.login_pane = tk.Frame(self.login_split, bg=T.BG)
         self.login_form = tk.Frame(self.login_pane, bg=T.BG, width=T.px(CARD_WIDTH))
         self.login_tools = tk.Frame(self.login_form, bg=T.BG)
@@ -2589,6 +2608,9 @@ class Application:
             }
             data_error = data_error or str(exc)
 
+        if not self.user:
+            history = []
+            plan.update(today=0, remaining=plan["daily_goal"], percent=0, streak=0, weekly=[])
         top = tk.Frame(self.body, bg=T.BG)
         # Fill the whole viewport: the body is now stretched by the Canvas
         # window item, so expand=True has real space to distribute.
@@ -3082,8 +3104,9 @@ class Application:
                 output.configure(text=answer, fg=T.TEXT)
                 if once_key is not None:
                     self._ai_asked.add(once_key)
-                    button.configure(text=self.tr("本题已询问"))
-                    button.state(["disabled"])
+                    more = len(once_key) == 3 and once_key[2] == 1
+                    button.configure(text=self.tr("💡 再问大肥鱼" if more else "本题已询问"))
+                    button.state(["!disabled"] if more else ["disabled"])
                 else:
                     button.configure(text=self.tr("发送"))
                     button.state(["!disabled"])
@@ -3409,8 +3432,6 @@ class Application:
             self._show_question_bank(bank_kind)
 
         self.clear(self.tr("题库管理"), show_heading=False, back=return_to_bank)
-        self.chrome.pack_forget()
-        self.rule.pack_forget()
         self.body.configure(padding=(T.px(T.SPACE_4), T.px(T.SPACE_4)))
         self.load_bank()
         self.import_preview = None
@@ -3505,8 +3526,12 @@ class Application:
             value.pack(anchor="w", pady=(4, 0))
             self.import_stat_labels[key] = value
 
-        columns = ("status", "id", "subject", "topic", "difficulty", "question")
-        self.import_table = ttk.Treeview(self.body, columns=columns, show="headings", height=9)
+        columns = ("status", "id", "subject", "topic", "difficulty", "question", "message")
+        preview_host = ttk.Frame(self.body)
+        preview_host.pack(fill="both", expand=True, pady=(0, 14))
+        preview_host.columnconfigure(0, weight=1)
+        preview_host.rowconfigure(0, weight=1)
+        self.import_table = ttk.Treeview(preview_host, columns=columns, show="headings", height=9)
         for key, title, width in (
             ("status", self.tr("状态"), 95),
             ("id", "ID", 90),
@@ -3514,10 +3539,18 @@ class Application:
             ("topic", self.tr("主题"), 120),
             ("difficulty", self.tr("难度"), 90),
             ("question", self.tr("题目"), 390),
+            ("message", self.tr("结果 / 错误原因"), 320),
         ):
             self.import_table.heading(key, text=title)
             self.import_table.column(key, width=T.px(width), anchor="w", stretch=key == "question")
-        self.import_table.pack(fill="both", expand=True, pady=(0, 14))
+        self.import_table.grid(row=0, column=0, sticky="nsew")
+        preview_y = ttk.Scrollbar(preview_host, orient="vertical", command=self.import_table.yview)
+        preview_x = ttk.Scrollbar(
+            preview_host, orient="horizontal", command=self.import_table.xview
+        )
+        preview_y.grid(row=0, column=1, sticky="ns")
+        preview_x.grid(row=1, column=0, sticky="ew")
+        self.import_table.configure(yscrollcommand=preview_y.set, xscrollcommand=preview_x.set)
         self.import_table.tag_configure("valid", foreground=T.SUCCESS_FG)
         self.import_table.tag_configure("duplicate", foreground=T.MUTED)
         self.import_table.tag_configure("error", foreground=T.ERROR)
@@ -3534,8 +3567,7 @@ class Application:
             font=TYPE_BODY,
         ).pack(anchor="w")
 
-        footer = tk.Frame(self.body, bg=T.BG)
-        footer.pack(fill="x", pady=(18, 0))
+        footer = self._action_dock()
         self.import_summary = tk.Label(
             footer,
             text=self.tr("ⓘ 错误记录不会导入题库"),
@@ -3544,15 +3576,15 @@ class Application:
             font=TYPE_HINT,
         )
         self.import_summary.pack(side="left")
-        self.import_confirm = self._mock_action(
+        self.import_confirm = modern.SoftButton(
             footer,
-            self.tr("合并 0 道有效题目"),
-            self.confirm_personal_import,
-            True,
-            padx=16,
-            pady=10,
+            text=self.tr("合并 0 道有效题目"),
+            command=self.confirm_personal_import,
+            width=T.px(240),
         )
         self.import_confirm.pack(side="right")
+        self.import_confirm.state(["disabled"])
+        self._set_import_step(1)
         self._mock_action(
             footer,
             self.tr("返回题库中心"),
@@ -3579,9 +3611,19 @@ class Application:
         )
         if not path:
             return
+        self.import_preview = None
+        self.import_confirm.state(["disabled"])
+        self.import_table.delete(*self.import_table.get_children())
+        self.import_summary.configure(text=self.tr("等待选择文件"))
+        for label in self.import_stat_labels.values():
+            label.configure(text="0")
+        self.import_file_name.configure(text=Path(path).name)
+        self.import_file_total.configure(text="")
         try:
             preview = self._question_import_service().preview(path)
         except (DataError, ValueError) as exc:
+            self._set_import_step(2)
+            self.import_summary.configure(text=self.tr(str(exc)))
             messagebox.showerror(self.tr("导入文件无效"), self.tr(str(exc)), parent=self.root)
             return
         self.import_preview = preview
@@ -3603,6 +3645,7 @@ class Application:
                     row.get("topic", ""),
                     row.get("difficulty", ""),
                     row.get("question", "") or self.tr(row["message"]),
+                    self.tr(row["message"]),
                 ),
                 tags=(row["status"],),
             )
@@ -3618,11 +3661,11 @@ class Application:
             label = getattr(self, "import_stat_labels", {}).get(key)
             if label:
                 label.configure(text=str(value))
-        self.import_summary.configure(text=self.tr("ⓘ 错误记录不会导入题库，可下载校验报告"))
+        self.import_summary.configure(text=self.tr("ⓘ 错误记录不会导入题库"))
         self.import_confirm.configure(
             text=self.tr("合并 {0} 道有效题目", len(preview.valid)),
-            bg=T.PRIMARY if preview.valid else T.PRIMARY_DISABLED,
         )
+        self.import_confirm.state(["!disabled"] if preview.valid else ["disabled"])
 
     def confirm_personal_import(self):
         preview = getattr(self, "import_preview", None)
@@ -3656,12 +3699,21 @@ class Application:
         self.editor.show_list()
 
     def _question_import_service(self):
+        actor = dict(self.auth.require_session(self.user))
+
+        def authorize():
+            current = self.auth.require_session(self.user)
+            if current["id"] != actor["id"]:
+                raise ValueError("账户已改变，请重新预览。")
+
         if getattr(self, "import_bank_kind", "personal") == "public":
             repository = QuestionEditor(
                 self.bank.folder, lambda: self.auth.require_admin(self.user)
             )
             return QuestionImportService(repository, [])
-        return QuestionImportService(self.personal_bank, self.public_questions)
+        return QuestionImportService(
+            self.personal_bank, lambda: self.bank.all(), authorize=authorize
+        )
 
     def _open_question_preview(self, question_id):
         question = self.by_id.get(question_id)
@@ -3733,6 +3785,26 @@ class Application:
                 card.configure(highlightbackground=T.BORDER, highlightthickness=1, bg=T.SURFACE)
         self._expanded_subject = None if current == name else name
 
+    def _practice_bank_picker(self, parent, bank_kind):
+        row = tk.Frame(parent, bg=T.SURFACE)
+        row.pack(fill="x", pady=(0, T.px(T.SPACE_3)))
+        tk.Label(row, text=self.tr("题库"), bg=T.SURFACE, fg=T.TEXT, font=T.TYPE_HEADING).pack(
+            side="left", padx=(0, T.px(16))
+        )
+        self.practice_bank_choice = tk.StringVar(value=bank_kind)
+        values = ["public"] + (["personal"] if self.user else [])
+        self.practice_bank_picker = modern.Segmented(
+            row,
+            values=values,
+            labels=[
+                self.tr("公共题库") if value == "public" else self.tr("个人题库")
+                for value in values
+            ],
+            variable=self.practice_bank_choice,
+            on_change=lambda value: self.configure(bank_kind=value),
+        )
+        self.practice_bank_picker.pack(side="left", fill="x", expand=True)
+
     def configure(self, subject=None, bank_kind="public"):
         if not self.check_session():
             return
@@ -3747,6 +3819,7 @@ class Application:
         self._practice_bank_kind = bank_kind
         self.clear(self.tr("配置练习"), show_heading=False)
         if not self.questions:
+            self._practice_bank_picker(self.body, bank_kind)
             self.label(
                 self.tr(
                     "个人题库为空，请先导入 JSON 或 CSV 文件。"
@@ -3791,6 +3864,8 @@ class Application:
             anchor="e",
         )
         self.config_summary.pack(side="right")
+
+        self._practice_bank_picker(host, bank_kind)
 
         tk.Label(
             host, text=self.tr("学科"), bg=T.SURFACE, fg=T.TEXT, font=T.TYPE_HEADING, anchor="w"
@@ -3870,7 +3945,7 @@ class Application:
 
         topic_col = column(0, 0, self.tr("主题"))
         self.topic_box = modern.Dropdown(topic_col, textvariable=self.topic, values=[])
-        self.topic_box.pack(fill="x", pady=(T.px(T.FIELD_GAP), 0))
+        self.topic_box.pack(side="bottom", fill="x", pady=(T.px(T.FIELD_GAP), 0))
         self.topic_box.bind("<<ComboboxSelected>>", self.refresh_difficulties)
 
         difficulty_col = column(0, 1, self.tr("难度"))
@@ -3879,7 +3954,7 @@ class Application:
             variable=self.difficulty,
             on_change=lambda _value: self.show_count(),
         )
-        self.difficulty_chips.pack(fill="x", pady=(T.px(T.FIELD_GAP), 0))
+        self.difficulty_chips.pack(side="bottom", fill="x", pady=(T.px(T.FIELD_GAP), 0))
         # Plain data holder: the visible control is the Segmented widget, so no
         # native Combobox is instantiated anywhere in the redesigned pages.
         self.difficulty_box = {"values": ()}
@@ -3888,12 +3963,12 @@ class Application:
         self.timer_box = modern.Stepper(
             limit_col, textvariable=self.timer_seconds, maximum=86400, minimum=0
         )
-        self.timer_box.pack(fill="x", pady=(T.px(T.FIELD_GAP), 0))
+        self.timer_box.pack(side="bottom", fill="x", pady=(T.px(T.FIELD_GAP), 0))
         self.timer_box.wheel_guard = lambda: self.display.get("wheel_controls", False)
 
         count_col = column(1, 1, self.tr("题目数量（不足时使用所有匹配题目；顺序随机）"))
         self.count_box = modern.Stepper(count_col, textvariable=self.count, maximum=20)
-        self.count_box.pack(fill="x", pady=(T.px(T.FIELD_GAP), 0))
+        self.count_box.pack(side="bottom", fill="x", pady=(T.px(T.FIELD_GAP), 0))
         self.count_box.bind("<KeyRelease>", self.show_count)
         self.count_box.wheel_guard = lambda: self.display.get("wheel_controls", False)
         self.count.trace_add("write", lambda *_: self._sync_start_button())
@@ -4111,14 +4186,15 @@ class Application:
         self._tick_timer(self.engine)
 
     def _tick_timer(self, engine):
-        if self.engine is not engine or engine.complete:
-            self.timer_label.configure(text="")
+        if self.engine is not engine or engine.complete or not self.timer_label.winfo_exists():
             return
         if self.deadline is None:
             self.timer_label.configure(text="")
             return
         remaining = max(0, int(self.deadline - time.monotonic() + 0.999))
-        self.timer_label.configure(text=self.tr("剩余 {0} 秒", remaining))
+        timer_text = self.tr("剩余 {0} 秒", remaining)
+        if self.timer_label.cget("text") != timer_text:
+            self.timer_label.configure(text=timer_text)
         if time.monotonic() >= self.deadline:
             if not self.check_session():
                 return
@@ -4134,7 +4210,17 @@ class Application:
             return
         self.root.after(200, lambda: self._tick_timer(engine))
 
+    def require_learning_account(self):
+        if self.user:
+            return self.check_session()
+        messagebox.showinfo(
+            self.tr("权限提示"), self.tr("请先登录账户，再查看错题本和学习记录。"), parent=self.root
+        )
+        return False
+
     def export_progress(self, kind, format):
+        if not self.require_learning_account():
+            return
         if not self.check_session():
             return
         path = filedialog.asksaveasfilename(
@@ -4200,7 +4286,7 @@ class Application:
                 return
             if not path.is_file():
                 raise OSError(self.tr("图片文件不存在"))
-            base = tk.PhotoImage(master=self.root, file=str(path))
+            base = source_image(self.root, path)
             surface = self._blend_color(host)
             frame = tk.Frame(host, bg=surface, bd=0, highlightthickness=0)
             frame.pack(anchor="w", pady=5)
@@ -4266,7 +4352,7 @@ class Application:
         self.show_image(
             q.question_image,
             host,
-            fallback_subject=q.subject if selectable else None,
+            fallback_subject=None,
             max_width=art_width,
         )
         self.option_buttons = []
@@ -4414,7 +4500,31 @@ class Application:
         self.question_content(engine.current, selectable=True, parent=self.question_shell)
         self._quiz_ai_panel(split)
         self.answer.trace_add("write", lambda *_: self._on_answer_changed())
-        self.feedback = self.label("")
+        self.quiz_feedback_host = ttk.Frame(self.body, style="App.TFrame", height=T.px(76))
+        self.quiz_feedback_host.pack(fill="x", pady=(T.px(8), 0))
+        self.quiz_feedback_host.pack_propagate(False)
+        feedback_canvas = tk.Canvas(self.quiz_feedback_host, bg=T.BG, highlightthickness=0)
+        feedback_scroll = ttk.Scrollbar(
+            self.quiz_feedback_host, orient="vertical", command=feedback_canvas.yview
+        )
+        feedback_scroll.pack(side="right", fill="y")
+        feedback_canvas.pack(side="left", fill="both", expand=True)
+        feedback_canvas.configure(yscrollcommand=feedback_scroll.set)
+        self.feedback = ttk.Label(feedback_canvas, text="", anchor="w", justify="left")
+        feedback_window = feedback_canvas.create_window((0, 0), window=self.feedback, anchor="nw")
+        self.feedback.bind(
+            "<Configure>",
+            lambda _event: feedback_canvas.configure(scrollregion=feedback_canvas.bbox("all")),
+        )
+
+        def fit_feedback(event):
+            if int(float(feedback_canvas.itemcget(feedback_window, "width"))) != event.width:
+                feedback_canvas.itemconfigure(feedback_window, width=event.width)
+            wrap = max(100, event.width - T.px(16))
+            if int(self.feedback.cget("wraplength") or 0) != wrap:
+                self.feedback.configure(wraplength=wrap)
+
+        feedback_canvas.bind("<Configure>", fit_feedback)
         dock = self._action_dock()
         self.submit_button = ttk.Button(
             dock, text=self.tr("检查答案"), command=self.submit, style="Accent.TButton"
@@ -4552,26 +4662,43 @@ class Application:
         footer = tk.Frame(panel, bg=T.SURFACE)
         footer.grid(row=2, column=0, sticky="ew", pady=(T.px(T.SPACE_3), 0))
         footer.columnconfigure(1, weight=1)
-        avatar_size = T.px(56)
-        self._circle_avatar(footer, avatar_size).grid(
-            row=0, column=0, sticky="w", padx=(0, T.px(T.SPACE_3))
-        )
+        self.quiz_avatar = tk.Label(footer, bg=T.SURFACE, bd=0)
+        self.quiz_avatar.grid(row=0, column=0, sticky="w", padx=(0, T.px(T.SPACE_3)))
         self.quiz_ai_button = modern.SoftButton(
             footer,
-            text=self.tr("问问 AI"),
+            text=self.tr("💡 问问大肥鱼"),
             command=self.ask_current_question_ai,
             variant="primary",
             width=T.px(220),
         )
         self.quiz_ai_button.grid(row=0, column=1, sticky="ew", ipady=0)
+        self._quiz_expression("thinking")
         return panel
+
+    def _quiz_expression(self, state):
+        sheet = self.project_root / "assets/battle/expressions.png"
+        if not sheet.exists():
+            return
+        self.quiz_avatar.image = portrait_image(self.root, sheet, state, T.px(80))
+        self.quiz_avatar.configure(image=self.quiz_avatar.image)
 
     def ask_current_question_ai(self):
         if not self.engine:
             return
-        key = (self.engine.id, self.engine.index)
+        base_key = (self.engine.id, self.engine.index)
+        if any(key[:2] == base_key for key in self._ai_pending):
+            return
+        stage = 2 if (*base_key, 1) in self._ai_asked else 1
+        key = (*base_key, stage)
+        self._quiz_expression("thinking")
+        message = question_message(self.engine.current, self.tr.language)
+        if stage == 1:
+            message += "\nFIRST HINT: Do not reveal the answer, its letter or uniquely identify it. Ask one guiding question and give a gentle conceptual hint. Do not eliminate all wrong options. Speak like a warm study buddy."
+        else:
+            q = self.engine.current
+            message += f"\nSECOND REQUEST: Explain the answer naturally and reveal it. Reference answer: {q.answer}. Reference explanation: {q.explanation}. Use plain conversational paragraphs."
         self._request_ai(
-            question_message(self.engine.current, self.tr.language),
+            message,
             self.quiz_ai_button,
             self.quiz_ai_reply,
             once_key=key,
@@ -4664,13 +4791,19 @@ class Application:
             widget.state(["disabled"])
         self._paint_options(submitted=True, correct=correct)
         q = self.engine.current
-        headline = self.tr("回答正确") if correct else self.tr("再想一想")
-        detail = self.tr("回答正确，继续保持。") if correct else self.tr("回答错误，已记入错题本。")
+        self._quiz_expression("correct" if correct else "wrong")
+        encouragement = (
+            self.tr("这题你抓住重点了！")
+            if correct
+            else self.tr("没关系，我们一起看看容易混淆的地方。")
+        )
+        self.quiz_ai_reply.configure(text=f"{encouragement}\n\n{q.explanation}")
+        result_title = (
+            self.tr("回答正确") if correct else self.tr("回答错误，已记入错题本。")
+        )
         self.feedback.configure(
             style="Success.TLabel" if correct else "Error.TLabel",
-            text=self.tr(
-                "{0}\n正确答案：{1}\n解析：{2}", f"{headline}\n{detail}", q.answer, q.explanation
-            ),
+            text=self.tr("{0}\n正确答案：{1}\n解析：{2}", result_title, q.answer, q.explanation),
         )
         next_label = (
             self.tr("查看结果")
@@ -4822,6 +4955,8 @@ class Application:
             self.root.destroy()
 
     def notebook(self):
+        if not self.require_learning_account():
+            return
         if not self.check_session():
             return
         self._nav_key = "notebook"
@@ -4963,6 +5098,16 @@ class Application:
             ).pack(side="left")
 
     def history(self):
+        if not self.require_learning_account():
+            return
+        from .history_ui import HistoryPage
+
+        self.history_page = HistoryPage(self)
+        self.history_page.show()
+
+    def _legacy_history(self):
+        if not self.require_learning_account():
+            return
         if not self.check_session():
             return
         self._nav_key = "history"

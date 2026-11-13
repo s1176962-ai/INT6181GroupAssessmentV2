@@ -1,0 +1,5 @@
+[
+  {"id":"DEMO-J-001","subject":"Import Lab","topic":"JSON basics","difficulty":"easy","type":"single_choice","question":"Which brackets surround a JSON array?","options":["[]","{}","()"],"answer":"[]","explanation":"Square brackets surround arrays. Curly brackets surround objects.","question_image":null,"option_images":null},
+  {"id":"DEMO-J-002","subject":"Import Lab","topic":"Data formats","difficulty":"easy","type":"single_choice","question":"Which JSON value represents the absence of a value?","options":["null","empty","undefined"],"answer":"null","explanation":"JSON uses the literal null to represent an absent value.","question_image":null,"option_images":null},
+  {"id":"DEMO-J-003","subject":"Import Lab","topic":"Encoding","difficulty":"medium","type":"single_choice","question":"Which encoding supports both Chinese and English text?","options":["UTF-8","ASCII only","Numbers only"],"answer":"UTF-8","explanation":"UTF-8 represents Unicode text, including Chinese and English.","question_image":null,"option_images":null}
+]
